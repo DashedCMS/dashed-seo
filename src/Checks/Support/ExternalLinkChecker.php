@@ -14,10 +14,17 @@ class ExternalLinkChecker
     public static function check(SiteAudit $audit): void
     {
         // select voor distinct, anders telt de id-kolom mee en is elke rij uniek.
+        // orderBy is niet optioneel zodra er een limit op staat: zonder vaste
+        // volgorde bepaalt de database-uitvoerder welke rijen overblijven,
+        // wat kan afhangen van fysieke opslagvolgorde. Twee scans van
+        // dezelfde, ongewijzigde site zouden dan een andere subset kunnen
+        // controleren, en broken_external_link jittert zonder dat er iets
+        // aan de site veranderd is.
         $urls = SiteAuditLink::where('audit_id', $audit->id)
             ->where('is_external', true)
             ->select(['to_url', 'to_url_hash'])
             ->distinct()
+            ->orderBy('to_url')
             ->limit(config('dashed-seo.crawler.max_external_links'))
             ->pluck('to_url_hash', 'to_url');
 
