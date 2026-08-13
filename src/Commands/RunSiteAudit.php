@@ -52,6 +52,21 @@ class RunSiteAudit extends Command
             $guard++;
         }
 
+        if ($audit->fresh()->status === SiteAudit::STATUS_CRAWLING) {
+            // De bewakingsteller is geraakt terwijl de crawl nog niet klaar
+            // was: er is dan geen enkele controle over deze scan gedraaid.
+            // Zonder deze afhandeling viel dit stilzwijgend door naar de
+            // score hieronder, en meldde het commando succes voor een scan
+            // die nooit is geanalyseerd.
+            $audit->update([
+                'status' => SiteAudit::STATUS_FAILED,
+                'failure_reason' => __('De crawl is niet binnen :rondes rondes afgerond, de scan is afgebroken.', [
+                    'rondes' => $guard,
+                ]),
+                'finished_at' => now(),
+            ]);
+        }
+
         if ($audit->fresh()->status === SiteAudit::STATUS_ANALYSING) {
             (new AnalyseSiteAuditJob($audit->id))->handle();
         }
