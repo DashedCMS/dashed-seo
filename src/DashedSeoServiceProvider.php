@@ -42,6 +42,12 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Crawling\BlockedByNoindexCheck::class,
             \Dashed\DashedSeo\Checks\Crawling\BlockedByNofollowCheck::class,
             \Dashed\DashedSeo\Checks\Crawling\BlockedByRobotsCheck::class,
+
+            // Redirects
+            \Dashed\DashedSeo\Checks\Redirects\Status3xxCheck::class,
+            \Dashed\DashedSeo\Checks\Redirects\TemporaryRedirectCheck::class,
+            \Dashed\DashedSeo\Checks\Redirects\LongRedirectChainCheck::class,
+            \Dashed\DashedSeo\Checks\Redirects\RedirectLoopCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }
