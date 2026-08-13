@@ -13,7 +13,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
     {
         $package
             ->name('dashed-seo')
-            ->hasConfigFile()
+            ->hasConfigFile(['dashed-seo', 'dashed-seo-checks'])
             ->hasMigrations([
                 '2026_08_13_000001_create_site_audits_table',
                 '2026_08_13_000002_create_site_audit_pages_table',
@@ -23,5 +23,10 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_13_000006_create_site_audit_assets_table',
             ])
             ->runsMigrations();
+    }
+
+    public function packageRegistered(): void
+    {
+        $this->app->singleton(SeoCheckRegistry::class);
     }
 }
