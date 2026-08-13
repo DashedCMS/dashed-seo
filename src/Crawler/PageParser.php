@@ -42,23 +42,15 @@ class PageParser
             $page->headingCounts[$tag] = $xpath->query("//{$tag}")->length;
         }
 
-        foreach ($xpath->query('//script | //style | //noscript') as $node) {
-            $node->parentNode?->removeChild($node);
-        }
         $body = $xpath->query('//body')->item(0);
-        $text = $body ? self::collectTextWithBlockBoundaries($body) : '';
+        $pieces = [];
+        if ($body !== null) {
+            self::collectText($body, $pieces);
+        }
+        $text = trim(preg_replace('/\s+/u', ' ', implode('', $pieces)));
         $page->wordCount = $text === '' ? 0 : count(preg_split('/\s+/u', $text));
 
-        // De scripts zijn hierboven uit de boom gehaald, dus die worden op een
-        // verse kopie opnieuw opgezocht.
-        $scriptDocument = new DOMDocument();
-        $previous = libxml_use_internal_errors(true);
-        $scriptDocument->loadHTML('<?xml encoding="utf-8" ?>' . $html);
-        libxml_clear_errors();
-        libxml_use_internal_errors($previous);
-        $scriptXpath = new DOMXPath($scriptDocument);
-
-        foreach ($scriptXpath->query('//script[@src]') as $node) {
+        foreach ($xpath->query('//script[@src]') as $node) {
             /** @var DOMElement $node */
             $resolved = UrlNormalizer::normalize($node->getAttribute('src'), $url);
             if ($resolved !== null) {
@@ -129,57 +121,34 @@ class PageParser
         return $value === '' ? null : $value;
     }
 
-    protected static function collectTextWithBlockBoundaries(DOMElement $body): string
+    protected static function collectText($node, array &$pieces): void
     {
-        $blockPieces = [];
-        self::collectBlockPieces($body, $blockPieces);
+        foreach ($node->childNodes as $child) {
+            if ($child instanceof DOMText) {
+                $pieces[] = $child->data;
+                continue;
+            }
 
-        return implode(' ', array_filter($blockPieces));
-    }
+            if (! $child instanceof DOMElement) {
+                continue;
+            }
 
-    protected static function collectBlockPieces($node, array &$blockPieces): void
-    {
-        if ($node instanceof DOMElement) {
-            $isBlock = in_array(strtolower($node->tagName), self::BLOCK_LEVEL_ELEMENTS, true);
+            $tag = strtolower($child->nodeName);
+
+            if (in_array($tag, ['script', 'style', 'noscript'], true)) {
+                continue;
+            }
+
+            $isBlock = in_array($tag, self::BLOCK_LEVEL_ELEMENTS, true);
 
             if ($isBlock) {
-                $textPieces = [];
-                self::collectAllText($node, $textPieces);
-                if (! empty($textPieces)) {
-                    $combined = implode('', $textPieces);
-                    $normalized = trim(preg_replace('/\s+/u', ' ', $combined));
-                    if ($normalized !== '') {
-                        $blockPieces[] = $normalized;
-                    }
-                }
-            } else {
-                foreach ($node->childNodes as $child) {
-                    self::collectBlockPieces($child, $blockPieces);
-                }
+                $pieces[] = "\n";
             }
-        } else {
-            foreach ($node->childNodes ?? [] as $child) {
-                self::collectBlockPieces($child, $blockPieces);
-            }
-        }
-    }
 
-    protected static function collectAllText($node, array &$textPieces): void
-    {
-        if ($node instanceof DOMText) {
-            $text = $node->nodeValue;
-            if ($text !== '') {
-                $textPieces[] = $text;
-            }
-        } elseif ($node instanceof DOMElement) {
-            $tagName = strtolower($node->tagName);
+            self::collectText($child, $pieces);
 
-            if ($tagName === 'br') {
-                $textPieces[] = "\n";
-            } else {
-                foreach ($node->childNodes as $child) {
-                    self::collectAllText($child, $textPieces);
-                }
+            if ($isBlock) {
+                $pieces[] = "\n";
             }
         }
     }
