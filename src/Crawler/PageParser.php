@@ -7,9 +7,16 @@ namespace Dashed\DashedSeo\Crawler;
 use DOMXPath;
 use DOMElement;
 use DOMDocument;
+use DOMText;
 
 class PageParser
 {
+    protected const BLOCK_LEVEL_ELEMENTS = [
+        'address', 'article', 'aside', 'blockquote', 'br', 'dd', 'div', 'dl',
+        'dt', 'fieldset', 'figcaption', 'figure', 'footer', 'form', 'h1', 'h2',
+        'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'li', 'main', 'nav', 'ol', 'p',
+        'pre', 'section', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'ul',
+    ];
     public static function parse(string $html, string $url): ParsedPage
     {
         $document = new DOMDocument();
@@ -39,19 +46,7 @@ class PageParser
             $node->parentNode?->removeChild($node);
         }
         $body = $xpath->query('//body')->item(0);
-        if ($body) {
-            $textNodes = $xpath->query('.//text()', $body);
-            $texts = [];
-            foreach ($textNodes as $textNode) {
-                $text = trim($textNode->nodeValue);
-                if ($text !== '') {
-                    $texts[] = $text;
-                }
-            }
-            $text = implode(' ', $texts);
-        } else {
-            $text = '';
-        }
+        $text = $body ? self::collectTextWithBlockBoundaries($body) : '';
         $page->wordCount = $text === '' ? 0 : count(preg_split('/\s+/u', $text));
 
         // De scripts zijn hierboven uit de boom gehaald, dus die worden op een
@@ -132,5 +127,60 @@ class PageParser
         $value = trim($node->getAttribute($attribute));
 
         return $value === '' ? null : $value;
+    }
+
+    protected static function collectTextWithBlockBoundaries(DOMElement $body): string
+    {
+        $blockPieces = [];
+        self::collectBlockPieces($body, $blockPieces);
+
+        return implode(' ', array_filter($blockPieces));
+    }
+
+    protected static function collectBlockPieces($node, array &$blockPieces): void
+    {
+        if ($node instanceof DOMElement) {
+            $isBlock = in_array(strtolower($node->tagName), self::BLOCK_LEVEL_ELEMENTS, true);
+
+            if ($isBlock) {
+                $textPieces = [];
+                self::collectAllText($node, $textPieces);
+                if (! empty($textPieces)) {
+                    $combined = implode('', $textPieces);
+                    $normalized = trim(preg_replace('/\s+/u', ' ', $combined));
+                    if ($normalized !== '') {
+                        $blockPieces[] = $normalized;
+                    }
+                }
+            } else {
+                foreach ($node->childNodes as $child) {
+                    self::collectBlockPieces($child, $blockPieces);
+                }
+            }
+        } else {
+            foreach ($node->childNodes ?? [] as $child) {
+                self::collectBlockPieces($child, $blockPieces);
+            }
+        }
+    }
+
+    protected static function collectAllText($node, array &$textPieces): void
+    {
+        if ($node instanceof DOMText) {
+            $text = $node->nodeValue;
+            if ($text !== '') {
+                $textPieces[] = $text;
+            }
+        } elseif ($node instanceof DOMElement) {
+            $tagName = strtolower($node->tagName);
+
+            if ($tagName === 'br') {
+                $textPieces[] = "\n";
+            } else {
+                foreach ($node->childNodes as $child) {
+                    self::collectAllText($child, $textPieces);
+                }
+            }
+        }
     }
 }
