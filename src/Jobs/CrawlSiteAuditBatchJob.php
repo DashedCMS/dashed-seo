@@ -292,11 +292,35 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
             $targets[$image['src']] = SiteAuditAsset::TYPE_IMAGE;
         }
 
+        $maxAssets = (int) config('dashed-seo.crawler.max_assets');
+
         foreach ($targets as $url => $type) {
+            // Een asset op een andere host wordt nooit opgehaald: dat zou een
+            // volledige-body GET tegen andermans origin zijn (een CDN, een
+            // partnerhost) in plaats van tegen de site die wordt geaudit.
+            // Niets vastleggen voor zo'n asset: geen rij betekent dat
+            // css_too_large, js_too_large, css_not_compressed en
+            // broken_image er simpelweg niets over te zeggen hebben, in
+            // plaats van een rij met status_code null die broken_image als
+            // "kapot" zou lezen.
+            if (! UrlNormalizer::isSameHost($url, $audit->base_url)) {
+                continue;
+            }
+
             $hash = UrlNormalizer::hash($url);
 
             if (SiteAuditAsset::where('audit_id', $audit->id)->where('url_hash', $hash)->exists()) {
                 continue;
+            }
+
+            // Begrenzing vóór elke fetch, niet erna, en over alle batches
+            // van deze audit heen (de telling komt uit de database, niet uit
+            // een teller die alleen dit ene job-proces kent). Zodra de cap
+            // geraakt is stopt het ophalen voor de rest van deze audit
+            // volledig: ook hier geen rij voor het restant, om dezelfde
+            // reden als hierboven bij een andere host.
+            if (SiteAuditAsset::where('audit_id', $audit->id)->count() >= $maxAssets) {
+                return;
             }
 
             try {
@@ -311,6 +335,8 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                     'type' => $type,
                     'status_code' => null,
                 ]);
+
+                usleep(config('dashed-seo.crawler.delay_ms') * 1000);
 
                 continue;
             }
@@ -347,6 +373,8 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                 'compressed' => $response->header('Content-Encoding') !== ''
                     || $response->header('x-encoded-content-encoding') !== '',
             ]);
+
+            usleep(config('dashed-seo.crawler.delay_ms') * 1000);
         }
     }
 }
