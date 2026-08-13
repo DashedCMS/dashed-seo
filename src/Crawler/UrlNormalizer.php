@@ -36,23 +36,33 @@ class UrlNormalizer
         }
 
         $path = $parts['path'] ?? '/';
+        $path = self::collapsePath($path);
+
         if ($path !== '/' && str_ends_with($path, '/')) {
             $path = rtrim($path, '/');
         }
 
         $query = '';
         if (isset($parts['query'])) {
-            parse_str($parts['query'], $params);
+            $params = self::parseQuery($parts['query']);
             $params = array_diff_key($params, array_flip(self::TRACKING_PARAMS));
             if ($params !== []) {
                 ksort($params);
-                $query = '?' . http_build_query($params);
+                $query = '?' . self::buildQuery($params);
             }
         }
 
-        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+        $scheme = strtolower($parts['scheme'] ?? 'https');
+        $host = strtolower($parts['host']);
+        $port = '';
+        if (isset($parts['port'])) {
+            $defaultPort = $scheme === 'https' ? 443 : 80;
+            if ($parts['port'] !== $defaultPort) {
+                $port = ':' . $parts['port'];
+            }
+        }
 
-        return strtolower($parts['scheme'] ?? 'https') . '://' . strtolower($parts['host']) . $port . $path . $query;
+        return $scheme . '://' . $host . $port . $path . $query;
     }
 
     public static function isSameHost(string $url, string $base): bool
@@ -66,6 +76,59 @@ class UrlNormalizer
     public static function hash(string $url): string
     {
         return hash('sha256', $url);
+    }
+
+    protected static function collapsePath(string $path): string
+    {
+        $segments = explode('/', $path);
+        $result = [];
+
+        foreach ($segments as $segment) {
+            if ($segment === '' || $segment === '.') {
+                continue;
+            }
+
+            if ($segment === '..') {
+                if (count($result) > 0) {
+                    array_pop($result);
+                }
+            } else {
+                $result[] = $segment;
+            }
+        }
+
+        return '/' . implode('/', $result);
+    }
+
+    protected static function parseQuery(string $query): array
+    {
+        $params = [];
+        $pairs = explode('&', $query);
+
+        foreach ($pairs as $pair) {
+            if ($pair === '') {
+                continue;
+            }
+
+            $parts = explode('=', $pair, 2);
+            $key = urldecode($parts[0]);
+            $value = isset($parts[1]) ? urldecode($parts[1]) : '';
+
+            $params[$key] = $value;
+        }
+
+        return $params;
+    }
+
+    protected static function buildQuery(array $params): string
+    {
+        $pairs = [];
+
+        foreach ($params as $key => $value) {
+            $pairs[] = rawurlencode($key) . '=' . rawurlencode($value);
+        }
+
+        return implode('&', $pairs);
     }
 
     protected static function resolve(string $relative, string $base): ?string
