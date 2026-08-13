@@ -84,6 +84,17 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Localisation\HreflangMissingReturnCheck::class,
             \Dashed\DashedSeo\Checks\Localisation\HreflangNoSelfReferenceCheck::class,
             \Dashed\DashedSeo\Checks\Localisation\HreflangInvalidCodeCheck::class,
+
+            // Snelheid
+            \Dashed\DashedSeo\Checks\Speed\SlowResponseCheck::class,
+            \Dashed\DashedSeo\Checks\Speed\HtmlTooLargeCheck::class,
+            \Dashed\DashedSeo\Checks\Speed\NoCompressionCheck::class,
+
+            // CSS & JS
+            \Dashed\DashedSeo\Checks\Assets\CssTooLargeCheck::class,
+            \Dashed\DashedSeo\Checks\Assets\CssNotCompressedCheck::class,
+            \Dashed\DashedSeo\Checks\Assets\JsTooLargeCheck::class,
+            \Dashed\DashedSeo\Checks\Assets\MixedContentCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }

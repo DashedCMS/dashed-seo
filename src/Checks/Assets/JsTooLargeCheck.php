@@ -1,0 +1,44 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Dashed\DashedSeo\Checks\Assets;
+
+use Dashed\DashedSeo\Models\SiteAudit;
+use Dashed\DashedSeo\Checks\BaseCheck;
+use Dashed\DashedSeo\Models\SiteAuditAsset;
+use Dashed\DashedSeo\Crawler\UrlNormalizer;
+
+class JsTooLargeCheck extends BaseCheck
+{
+    public function key(): string
+    {
+        return 'js_too_large';
+    }
+
+    public function run(SiteAudit $audit): iterable
+    {
+        $tooLarge = SiteAuditAsset::where('audit_id', $audit->id)
+            ->where('type', SiteAuditAsset::TYPE_JS)
+            ->where('size', '>', $this->threshold('js_max_bytes'))
+            ->pluck('url', 'url_hash');
+
+        if ($tooLarge->isEmpty()) {
+            return;
+        }
+
+        foreach ($this->pages($audit)->where('status_code', 200)->orderBy('id')->cursor() as $page) {
+            $hits = [];
+
+            foreach ($page->scripts ?? [] as $url) {
+                if ($tooLarge->has(UrlNormalizer::hash($url))) {
+                    $hits[] = $url;
+                }
+            }
+
+            if ($hits !== []) {
+                yield $this->finding($page, ['resources' => $hits]);
+            }
+        }
+    }
+}
