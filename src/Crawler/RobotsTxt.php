@@ -12,6 +12,7 @@ class RobotsTxt
         protected array $disallows = [],
         protected array $sitemaps = [],
         protected bool $found = false,
+        protected bool $unavailable = false,
     ) {
     }
 
@@ -22,16 +23,25 @@ class RobotsTxt
                 ->withHeaders(['User-Agent' => config('dashed-seo.crawler.user_agent')])
                 ->get(rtrim($baseUrl, '/') . '/robots.txt');
         } catch (\Throwable) {
-            return new self();
+            // Network error or timeout - we cannot verify the rules, assume everything is disallowed
+            return new self(unavailable: true);
         }
 
+        // Server error (5xx) - we cannot verify the rules, assume everything is disallowed
+        if ($response->serverError()) {
+            return new self(unavailable: true);
+        }
+
+        // Client error (4xx like 404) - no rules exist, everything is allowed
         if (! $response->successful()) {
             return new self();
         }
 
         $disallows = [];
         $sitemaps = [];
-        $appliesToUs = false;
+        $currentGroupAgents = [];
+        $currentGroupDisallows = [];
+        $inUserAgentBlock = false;
 
         foreach (preg_split('/\R/', $response->body()) as $line) {
             $line = trim($line);
@@ -43,21 +53,41 @@ class RobotsTxt
             $field = strtolower(trim($field));
             $value = trim($value);
 
+            if ($field === 'user-agent') {
+                // Transition from directives back to user-agent: finalize previous group
+                if (!$inUserAgentBlock && !empty($currentGroupAgents)) {
+                    if (in_array('*', $currentGroupAgents)) {
+                        $disallows = array_merge($disallows, $currentGroupDisallows);
+                    }
+                    $currentGroupAgents = [];
+                    $currentGroupDisallows = [];
+                }
+
+                if ($value !== '') {
+                    $currentGroupAgents[] = $value;
+                }
+                $inUserAgentBlock = true;
+
+                continue;
+            }
+
+            // We're no longer in the user-agent block
+            $inUserAgentBlock = false;
+
             if ($field === 'sitemap' && $value !== '') {
                 $sitemaps[] = $value;
 
                 continue;
             }
 
-            if ($field === 'user-agent') {
-                $appliesToUs = $value === '*';
-
-                continue;
+            if ($field === 'disallow' && $value !== '') {
+                $currentGroupDisallows[] = $value;
             }
+        }
 
-            if ($field === 'disallow' && $appliesToUs && $value !== '') {
-                $disallows[] = $value;
-            }
+        // Finalize the last group
+        if (!empty($currentGroupAgents) && in_array('*', $currentGroupAgents)) {
+            $disallows = array_merge($disallows, $currentGroupDisallows);
         }
 
         return new self($disallows, $sitemaps, true);
@@ -78,8 +108,18 @@ class RobotsTxt
         return $this->found;
     }
 
+    public function isUnavailable(): bool
+    {
+        return $this->unavailable;
+    }
+
     public function allows(string $path): bool
     {
+        // If robots.txt was unavailable (5xx, timeout, error), disallow everything
+        if ($this->unavailable) {
+            return false;
+        }
+
         foreach ($this->disallows as $rule) {
             if (str_starts_with($path, $rule)) {
                 return false;
