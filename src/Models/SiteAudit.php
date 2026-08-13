@@ -32,6 +32,21 @@ class SiteAudit extends Model
         return $this->hasMany(SiteAuditPage::class, 'audit_id');
     }
 
+    public function links(): HasMany
+    {
+        return $this->hasMany(SiteAuditLink::class, 'audit_id');
+    }
+
+    public function findings(): HasMany
+    {
+        return $this->hasMany(SiteAuditFinding::class, 'audit_id');
+    }
+
+    public function checkResults(): HasMany
+    {
+        return $this->hasMany(SiteAuditCheckResult::class, 'audit_id');
+    }
+
     public function isRunning(): bool
     {
         return in_array($this->status, [self::STATUS_PENDING, self::STATUS_CRAWLING, self::STATUS_ANALYSING], true);

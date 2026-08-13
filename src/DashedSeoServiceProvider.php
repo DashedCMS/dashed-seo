@@ -17,6 +17,9 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             ->hasMigrations([
                 '2026_08_13_000001_create_site_audits_table',
                 '2026_08_13_000002_create_site_audit_pages_table',
+                '2026_08_13_000003_create_site_audit_links_table',
+                '2026_08_13_000004_create_site_audit_findings_table',
+                '2026_08_13_000005_create_site_audit_check_results_table',
             ])
             ->runsMigrations();
     }
