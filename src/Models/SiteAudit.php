@@ -47,6 +47,11 @@ class SiteAudit extends Model
         return $this->hasMany(SiteAuditCheckResult::class, 'audit_id');
     }
 
+    public function assets(): HasMany
+    {
+        return $this->hasMany(SiteAuditAsset::class, 'audit_id');
+    }
+
     public function isRunning(): bool
     {
         return in_array($this->status, [self::STATUS_PENDING, self::STATUS_CRAWLING, self::STATUS_ANALYSING], true);
