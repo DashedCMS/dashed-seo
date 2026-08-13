@@ -19,22 +19,39 @@ class HreflangLangMismatchCheck extends BaseCheck
     {
         $graph = HreflangGraph::build($audit);
 
-        foreach ($graph->pagesWithHreflang() as $page) {
-            if ($page->html_lang === null) {
-                continue;
-            }
+        // Alle deelnemende pagina's, niet alleen de pagina die zichzelf noemt: een
+        // hreflang die vanaf een andere pagina naar hier wijst hoort net zo goed te
+        // kloppen met het lang-attribuut van de pagina waar hij op uitkomt.
+        $seen = [];
 
+        foreach ($graph->pagesWithHreflang() as $page) {
             foreach ($graph->entriesFor($page->id) as $entry) {
-                if ($entry['target_hash'] !== $page->url_hash || $entry['lang'] === 'x-default') {
+                if ($entry['lang'] === 'x-default') {
+                    continue;
+                }
+
+                $target = $graph->pageByHash($entry['target_hash']);
+                if ($target === null || $target->html_lang === null) {
                     continue;
                 }
 
                 $declared = strtolower(explode('-', $entry['lang'])[0]);
-                $actual = strtolower(explode('-', $page->html_lang)[0]);
+                $actual = strtolower(explode('-', $target->html_lang)[0]);
 
-                if ($declared !== $actual) {
-                    yield $this->finding($page, ['hreflang' => $entry['lang'], 'html_lang' => $page->html_lang]);
+                if ($declared === $actual) {
+                    continue;
                 }
+
+                // Eenzelfde doelpagina en dezelfde verkeerde taalcode zijn een en
+                // dezelfde fout, of die nu van de pagina zelf komt of van een andere
+                // pagina die ernaar verwijst.
+                $dedupeKey = $target->id . '|' . $declared;
+                if (isset($seen[$dedupeKey])) {
+                    continue;
+                }
+                $seen[$dedupeKey] = true;
+
+                yield $this->finding($target, ['hreflang' => $entry['lang'], 'html_lang' => $target->html_lang]);
             }
         }
     }
