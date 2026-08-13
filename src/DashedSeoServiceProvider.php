@@ -76,6 +76,14 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Content\MissingAltCheck::class,
             \Dashed\DashedSeo\Checks\Content\ThinContentCheck::class,
             \Dashed\DashedSeo\Checks\Content\BrokenImageCheck::class,
+
+            // Lokalisatie
+            \Dashed\DashedSeo\Checks\Localisation\HreflangLangMismatchCheck::class,
+            \Dashed\DashedSeo\Checks\Localisation\MultipleHreflangForPageCheck::class,
+            \Dashed\DashedSeo\Checks\Localisation\HreflangBrokenTargetCheck::class,
+            \Dashed\DashedSeo\Checks\Localisation\HreflangMissingReturnCheck::class,
+            \Dashed\DashedSeo\Checks\Localisation\HreflangNoSelfReferenceCheck::class,
+            \Dashed\DashedSeo\Checks\Localisation\HreflangInvalidCodeCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }
