@@ -42,7 +42,16 @@ class AuditComparer
             });
     }
 
-    /** @return array<string, int> */
+    /**
+     * Per controle het aantal verschillende pagina's dat de vorige scan nog
+     * wel raakte en deze scan niet meer. Zelfde eenheid als
+     * site_audit_check_results.count: een pagina, geen bevindingsregel. Een
+     * controle die per link meldt (internal_link_to_4xx) kan twee
+     * bevindingsregels op dezelfde pagina achterlaten in de vorige scan; die
+     * horen hier als een enkele opgeloste pagina te tellen.
+     *
+     * @return array<string, int>
+     */
     public static function resolvedCounts(SiteAudit $audit): array
     {
         $previous = self::previous($audit);
@@ -53,11 +62,17 @@ class AuditComparer
 
         $now = self::keys($audit);
         $counts = [];
+        $seen = [];
 
         foreach (SiteAuditFinding::where('audit_id', $previous->id)->cursor() as $finding) {
-            if (! isset($now[self::key($finding->check_key, $finding->url)])) {
-                $counts[$finding->check_key] = ($counts[$finding->check_key] ?? 0) + 1;
+            $key = self::key($finding->check_key, $finding->url);
+
+            if (isset($now[$key]) || isset($seen[$key])) {
+                continue;
             }
+            $seen[$key] = true;
+
+            $counts[$finding->check_key] = ($counts[$finding->check_key] ?? 0) + 1;
         }
 
         return $counts;

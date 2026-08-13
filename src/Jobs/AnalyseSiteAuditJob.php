@@ -159,13 +159,21 @@ class AnalyseSiteAuditJob implements ShouldQueue
 
         AuditComparer::markNew($audit);
 
+        // Zelfde eenheid als count hierboven: verschillende getroffen
+        // pagina's, geen bevindingsregels. Een simpele ->count() op is_new
+        // telt regels, en een controle die per link meldt (bv.
+        // internal_link_to_4xx) kan dan meer nieuwe regels tonen dan er
+        // ooit bevindingen in totaal zijn voor die controle. COALESCE vangt
+        // een sitebrede bevinding zonder page_id op, die net als bij count
+        // hoogstens een keer moet meetellen.
+        $newCounts = SiteAuditFinding::where('audit_id', $audit->id)
+            ->where('is_new', true)
+            ->selectRaw('check_key, COUNT(DISTINCT COALESCE(page_id, -1)) as aantal')
+            ->groupBy('check_key')
+            ->pluck('aantal', 'check_key');
+
         foreach (SiteAuditCheckResult::where('audit_id', $audit->id)->get() as $result) {
-            $result->update([
-                'new_count' => SiteAuditFinding::where('audit_id', $audit->id)
-                    ->where('check_key', $result->check_key)
-                    ->where('is_new', true)
-                    ->count(),
-            ]);
+            $result->update(['new_count' => (int) ($newCounts[$result->check_key] ?? 0)]);
         }
 
         foreach (AuditComparer::resolvedCounts($audit) as $checkKey => $resolved) {
