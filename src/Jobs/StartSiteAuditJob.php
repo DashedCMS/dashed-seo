@@ -84,6 +84,12 @@ class StartSiteAuditJob implements ShouldQueue
             $rows[UrlNormalizer::hash($normalized)] = $this->row($audit, $normalized, true, $robots);
         }
 
+        // Hoeveel bruikbare adressen de sitemap zelf opleverde, voordat de
+        // terugval hieronder $rows eventueel vult met de enkele root-rij.
+        // MissingFromSitemapCheck leunt hierop om te weten of er uberhaupt
+        // een sitemap is om iets in te missen.
+        $sitemapUrlCount = count($rows);
+
         if ($rows === []) {
             $root = UrlNormalizer::normalize($base . '/', $base);
             $rows[UrlNormalizer::hash($root)] = $this->row($audit, $root, false, $robots);
@@ -98,6 +104,7 @@ class StartSiteAuditJob implements ShouldQueue
             'urls_found' => count($rows),
             'settings' => array_merge($audit->settings ?? [], [
                 'robots_has_sitemap' => $robots->sitemaps() !== [],
+                'sitemap_url_count' => $sitemapUrlCount,
                 'max_pages' => config('dashed-seo.crawler.max_pages'),
                 'max_depth' => config('dashed-seo.crawler.max_depth'),
             ]),
