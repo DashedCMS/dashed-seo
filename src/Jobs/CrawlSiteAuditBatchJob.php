@@ -278,7 +278,24 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                 // de echte bestandsgrootte willen. De body staat al in het
                 // geheugen op deze regel, dus strlen() kost niets extra.
                 'size' => strlen($response->body()),
-                'compressed' => $response->header('Content-Encoding') !== null,
+                // Guzzle decodeert een gzip/br-antwoord automatisch (default
+                // decode_content) en hernoemt daarbij Content-Encoding naar
+                // x-encoded-content-encoding, waarna het de originele header
+                // verwijdert (vendor/guzzlehttp/guzzle/src/Handler/EasyHandle.php:102,
+                // vendor/guzzlehttp/guzzle/src/Handler/StreamHandler.php:316).
+                // Content-Encoding is dus bij een echt gecomprimeerd antwoord
+                // altijd al weg tegen de tijd dat wij hier kijken; zonder de
+                // hernoemde header te lezen zou compressed hier structureel
+                // false zijn voor precies de antwoorden die wel gecomprimeerd
+                // waren.
+                //
+                // ->header() proxyt PSR-7's getHeaderLine(), die voor een
+                // ontbrekende header '' teruggeeft, nooit null: een check op
+                // !== null staat dus altijd op true en compressed zou voor
+                // elk antwoord waar zijn, gecomprimeerd of niet. Vandaar de
+                // vergelijking met '' in plaats van null.
+                'compressed' => $response->header('Content-Encoding') !== ''
+                    || $response->header('x-encoded-content-encoding') !== '',
             ]);
         }
     }
