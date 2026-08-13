@@ -60,11 +60,29 @@ abstract class BaseCheck implements SeoCheck
 
     protected function threshold(string $name): int
     {
-        return (int) config("dashed-seo.thresholds.{$name}");
+        $value = config("dashed-seo.thresholds.{$name}");
+
+        if ($value === null) {
+            throw new \RuntimeException(sprintf(
+                "Geen drempel '%s' gevonden in config/dashed-seo.php onder 'thresholds'.",
+                $name,
+            ));
+        }
+
+        return (int) $value;
     }
 
     protected function definition(): array
     {
-        return config("dashed-seo-checks.{$this->key()}");
+        $definition = config("dashed-seo-checks.{$this->key()}");
+
+        if ($definition === null) {
+            throw new \RuntimeException(sprintf(
+                "Geen configuratie gevonden voor controle '%s'. Voeg een item toe in packages/dashed/dashed-seo/config/dashed-seo-checks.php.",
+                $this->key(),
+            ));
+        }
+
+        return $definition;
     }
 }

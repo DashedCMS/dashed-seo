@@ -13,7 +13,18 @@ class SeoCheckRegistry
 
     public function register(SeoCheck $check): void
     {
-        $this->checks[$check->key()] = $check;
+        $key = $check->key();
+
+        if (isset($this->checks[$key])) {
+            throw new \RuntimeException(sprintf(
+                "Controle-sleutel '%s' is al geregistreerd door %s en kan niet opnieuw geregistreerd worden door %s.",
+                $key,
+                $this->checks[$key]::class,
+                $check::class,
+            ));
+        }
+
+        $this->checks[$key] = $check;
     }
 
     /** @return array<int, SeoCheck> */
