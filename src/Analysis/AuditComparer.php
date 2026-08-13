@@ -13,10 +13,37 @@ class AuditComparer
 {
     public static function previous(SiteAudit $audit): ?SiteAudit
     {
-        return SiteAudit::where('site_id', $audit->site_id)
+        // Zonder grens pakt dit altijd de meest recente voltooide scan van de
+        // site, ook als die na $audit zelf is afgerond. Dat gaat mis zodra
+        // iemand een oudere audit opnieuw laat analyseren (een herstart, een
+        // handmatige herbeoordeling): de vorige scan moet dan de audit ervoor
+        // zijn, niet een audit die er in werkelijkheid na kwam. finished_at
+        // is de grens als $audit al is afgerond; zolang dat niet zo is
+        // (bijvoorbeeld tijdens de analysefase zelf) is started_at het beste
+        // alternatief. Is geen van beide gezet, dan is er niets om op te
+        // sorteren en blijft het gedrag ongewijzigd.
+        $cutoff = $audit->finished_at ?? $audit->started_at;
+
+        $query = SiteAudit::where('site_id', $audit->site_id)
             ->where('id', '!=', $audit->id)
-            ->where('status', SiteAudit::STATUS_COMPLETED)
-            ->orderByDesc('finished_at')
+            ->where('status', SiteAudit::STATUS_COMPLETED);
+
+        if ($cutoff !== null) {
+            // Een kale finished_at < cutoff is niet genoeg: timestamp-kolommen
+            // hebben doorgaans secondeprecisie, en twee audits die in
+            // dezelfde seconde starten/eindigen (snel na elkaar gedraaid,
+            // zoals in de testsuite) zouden anders allebei buiten de grens
+            // vallen. Bij een gelijke timestamp beslist het id, net als de
+            // orderByDesc('id')-tiebreaker hieronder bij een gelijkspel.
+            $query->where(function ($query) use ($cutoff, $audit) {
+                $query->where('finished_at', '<', $cutoff)
+                    ->orWhere(function ($query) use ($cutoff, $audit) {
+                        $query->where('finished_at', $cutoff)->where('id', '<', $audit->id);
+                    });
+            });
+        }
+
+        return $query->orderByDesc('finished_at')
             ->orderByDesc('id')
             ->first();
     }
