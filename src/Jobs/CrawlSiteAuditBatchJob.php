@@ -289,6 +289,17 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
             $targets[$url] = SiteAuditAsset::TYPE_JS;
         }
         foreach ($parsed->images as $image) {
+            // PageParser valt terug op de rauwe src wanneer normalize() hem
+            // afwijst (een data:-URI, een leeg src-attribuut, een ander
+            // schema), zodat de alt-tekst-controle de afbeelding nog ziet.
+            // Zo'n terugval is geen bronbestand: hij wordt hier nooit
+            // opgehaald, dus levert geen status_code-null-rij op die
+            // broken_image als kapot zou lezen, en een lange base64-string
+            // komt niet in de url-kolom van site_audit_assets terecht.
+            if (UrlNormalizer::normalize($image['src'], $audit->base_url) === null) {
+                continue;
+            }
+
             $targets[$image['src']] = SiteAuditAsset::TYPE_IMAGE;
         }
 
