@@ -95,6 +95,18 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Assets\CssNotCompressedCheck::class,
             \Dashed\DashedSeo\Checks\Assets\JsTooLargeCheck::class,
             \Dashed\DashedSeo\Checks\Assets\MixedContentCheck::class,
+
+            // Links
+            \Dashed\DashedSeo\Checks\Links\NoIncomingLinksCheck::class,
+            \Dashed\DashedSeo\Checks\Links\SingleIncomingLinkCheck::class,
+            \Dashed\DashedSeo\Checks\Links\InternalLinkToRedirectCheck::class,
+            \Dashed\DashedSeo\Checks\Links\InternalLinkTo4xxCheck::class,
+            \Dashed\DashedSeo\Checks\Links\InternalNofollowLinkCheck::class,
+            \Dashed\DashedSeo\Checks\Links\InternalLinkWithoutAnchorCheck::class,
+            \Dashed\DashedSeo\Checks\Links\ExternalNofollowLinkCheck::class,
+            \Dashed\DashedSeo\Checks\Links\ExternalLinkWithoutAnchorCheck::class,
+            \Dashed\DashedSeo\Checks\Links\BrokenExternalLinkCheck::class,
+            \Dashed\DashedSeo\Checks\Links\FaviconMissingCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }

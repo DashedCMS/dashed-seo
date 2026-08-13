@@ -11,6 +11,7 @@ class SiteAuditAsset extends Model
     public const TYPE_IMAGE = 'image';
     public const TYPE_CSS = 'css';
     public const TYPE_JS = 'js';
+    public const TYPE_EXTERNAL = 'external';
 
     public $timestamps = false;
 
