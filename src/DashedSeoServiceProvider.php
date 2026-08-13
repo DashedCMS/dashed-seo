@@ -29,4 +29,21 @@ class DashedSeoServiceProvider extends PackageServiceProvider
     {
         $this->app->singleton(SeoCheckRegistry::class);
     }
+
+    public function packageBooted(): void
+    {
+        $registry = $this->app->make(SeoCheckRegistry::class);
+
+        foreach ([
+            // Crawlen & Indexatie
+            \Dashed\DashedSeo\Checks\Crawling\Status4xxCheck::class,
+            \Dashed\DashedSeo\Checks\Crawling\Status5xxCheck::class,
+            \Dashed\DashedSeo\Checks\Crawling\UnreachableCheck::class,
+            \Dashed\DashedSeo\Checks\Crawling\BlockedByNoindexCheck::class,
+            \Dashed\DashedSeo\Checks\Crawling\BlockedByNofollowCheck::class,
+            \Dashed\DashedSeo\Checks\Crawling\BlockedByRobotsCheck::class,
+        ] as $class) {
+            $registry->register(new $class());
+        }
+    }
 }
