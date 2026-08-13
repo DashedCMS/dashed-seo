@@ -157,6 +157,19 @@ class AnalyseSiteAuditJob implements ShouldQueue
             $audit->update(['heartbeat_at' => now()]);
         }
 
+        // Momentopname van de gewichten en van welke controles op dit
+        // moment geregistreerd zijn (met hun ernst, want daar hangt het
+        // gewicht van af). SeoScoreCalculator telt normaal over de levende
+        // registry; zonder deze momentopname zou een controle die pas na
+        // deze audit is toegevoegd het gewicht-totaal van dit oude rapport
+        // alsnog laten meeschuiven bij een latere herberekening. De formule
+        // zelf verandert hierdoor niet.
+        $scoreWeights = config('dashed-seo.weights');
+        $scoreCheckSeverities = [];
+        foreach ($registry->checks() as $check) {
+            $scoreCheckSeverities[$check->key()] = $check->severity();
+        }
+
         AuditComparer::markNew($audit);
 
         // Zelfde eenheid als count hierboven: verschillende getroffen
@@ -197,10 +210,19 @@ class AnalyseSiteAuditJob implements ShouldQueue
             // ondergrens van 1 zou die eigen bodemwaarde omzeilen en één
             // toevallige bevinding laten uitrekenen alsof hij honderd
             // procent van de "pagina's" raakt.
-            'health_score' => SeoScoreCalculator::calculate($affectedPageCounts, (int) $audit->pages_crawled),
+            'health_score' => SeoScoreCalculator::calculate(
+                $affectedPageCounts,
+                (int) $audit->pages_crawled,
+                $scoreWeights,
+                $scoreCheckSeverities,
+            ),
             'error_count' => $severityCounts['error'],
             'warning_count' => $severityCounts['warning'],
             'notice_count' => $severityCounts['notice'],
+            'settings' => array_merge($audit->settings ?? [], [
+                'score_weights' => $scoreWeights,
+                'score_check_severities' => $scoreCheckSeverities,
+            ]),
         ]);
     }
 }
