@@ -184,7 +184,7 @@ return [
         'section' => 'meta_tags',
         'severity' => 'error',
         'label' => 'Canonical wijst naar een niet-indexeerbare pagina',
-        'description' => 'De canonical wijst naar een adres dat zelf op noindex staat, doorverwijst of niet bestaat, waardoor beide pagina\'s uit de index vallen.',
+        'description' => 'De canonical wijst naar een adres dat zelf op noindex staat, doorverwijst of een foutcode teruggeeft, waardoor beide pagina\'s uit de index vallen.',
         'how_to_fix' => 'Laat de canonical naar een bestaande, indexeerbare pagina wijzen.',
     ],
 
