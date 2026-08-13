@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Crawler;
 
+use DOMText;
 use DOMXPath;
 use DOMElement;
 use DOMDocument;
-use DOMText;
 
 class PageParser
 {
@@ -17,6 +17,7 @@ class PageParser
         'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'li', 'main', 'nav', 'ol', 'p',
         'pre', 'section', 'table', 'tbody', 'td', 'tfoot', 'th', 'thead', 'tr', 'ul',
     ];
+
     public static function parse(string $html, string $url): ParsedPage
     {
         $document = new DOMDocument();
@@ -66,7 +67,7 @@ class PageParser
             ];
         }
 
-        foreach ($xpath->query('//img[@src]') as $node) {
+        foreach ($xpath->query('//img[@src][not(ancestor::noscript) and not(ancestor::script) and not(ancestor::style)]') as $node) {
             /** @var DOMElement $node */
             $resolved = UrlNormalizer::normalize($node->getAttribute('src'), $url);
             $page->images[] = [
@@ -75,7 +76,7 @@ class PageParser
             ];
         }
 
-        foreach ($xpath->query('//link[@rel="stylesheet"][@href]') as $node) {
+        foreach ($xpath->query('//link[@rel="stylesheet"][@href][not(ancestor::noscript) and not(ancestor::script) and not(ancestor::style)]') as $node) {
             /** @var DOMElement $node */
             $resolved = UrlNormalizer::normalize($node->getAttribute('href'), $url);
             if ($resolved !== null) {
@@ -83,7 +84,7 @@ class PageParser
             }
         }
 
-        foreach ($xpath->query('//a[@href]') as $node) {
+        foreach ($xpath->query('//a[@href][not(ancestor::noscript) and not(ancestor::script) and not(ancestor::style)]') as $node) {
             /** @var DOMElement $node */
             $resolved = UrlNormalizer::normalize($node->getAttribute('href'), $url);
             if ($resolved === null) {
@@ -126,6 +127,7 @@ class PageParser
         foreach ($node->childNodes as $child) {
             if ($child instanceof DOMText) {
                 $pieces[] = $child->data;
+
                 continue;
             }
 
