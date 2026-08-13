@@ -1,0 +1,33 @@
+{
+    "name": "dashed/dashed-seo",
+    "description": "SEO-audit en crawler voor Dashed CMS",
+    "keywords": ["Dashed", "laravel", "dashed-seo", "seo"],
+    "homepage": "https://github.com/DashedCMS/dashed-seo",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Robin van Maasakker",
+            "email": "robin@dashed.nl",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "dashed/dashed-core": "*",
+        "spatie/laravel-package-tools": "^1.16"
+    },
+    "autoload": {
+        "psr-4": {
+            "Dashed\\DashedSeo\\": "src"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Dashed\\DashedSeo\\DashedSeoServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
