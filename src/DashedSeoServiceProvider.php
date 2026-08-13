@@ -55,6 +55,18 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Sitemap\Sitemap4xxCheck::class,
             \Dashed\DashedSeo\Checks\Sitemap\SitemapNotInRobotsCheck::class,
             \Dashed\DashedSeo\Checks\Sitemap\MissingFromSitemapCheck::class,
+
+            // Meta Tags
+            \Dashed\DashedSeo\Checks\MetaTags\TitleMissingCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\DuplicateTitleCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\TitleTooLongCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\TitleTooShortCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\DescriptionMissingCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\DuplicateDescriptionCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\DescriptionTooLongCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\CanonicalMissingCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\CanonicalPointsElsewhereCheck::class,
+            \Dashed\DashedSeo\Checks\MetaTags\CanonicalToNonIndexableCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }
