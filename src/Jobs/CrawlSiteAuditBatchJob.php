@@ -39,6 +39,19 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
             return;
         }
 
+        // ModelResolver::resolve() warmt lazy en houdt de cache daarna vast
+        // voor de rest van het PHP-proces (zie de contract-uitleg op de
+        // klasse zelf). StartSiteAuditJob flusht al bij het begin van een
+        // scan, maar dit hier is de plek waar het contract ook echt
+        // afgedwongen kan worden: op een queue met een lang levende worker
+        // draait deze job zelf in dat langlevende proces, batch na batch,
+        // en kan een audit ook opnieuw op deze job stuiten na een reclaim of
+        // een herstart zonder dat StartSiteAuditJob opnieuw draait. Warmen is
+        // per site en goedkoop ten opzichte van het ophalen van de pagina's
+        // zelf; een verse warmup per batch is de prijs voor nooit een
+        // "bewerk deze pagina"-link die naar een verouderde slug wijst.
+        ModelResolver::flush();
+
         $this->reclaimStrandedPages($audit);
 
         $batch = $audit->pages()->pending()->orderBy('id')->limit(config('dashed-seo.crawler.batch_size'))->get();
