@@ -38,6 +38,8 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
             return;
         }
 
+        $this->reclaimStrandedPages($audit);
+
         $batch = $audit->pages()->pending()->orderBy('id')->limit(config('dashed-seo.crawler.batch_size'))->get();
 
         if ($batch->isEmpty()) {
@@ -63,6 +65,26 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
         ]);
 
         self::dispatch($audit->id);
+    }
+
+    protected function reclaimStrandedPages(SiteAudit $audit): void
+    {
+        // Een rij die op crawling staat maar al langer dan een ruime
+        // veelvoud van de fetch-timeout niet is bijgewerkt, hoort bij een
+        // worker die halverwege een verzoek is gestopt (killed job, deploy,
+        // OOM). Zonder reclaim blijft die rij voor altijd crawling: geen
+        // latere batch pakt hem op via de pending()-scope, de voorraad lijkt
+        // "leeg" terwijl die pagina nooit echt bezocht is, en de scan gaat
+        // door naar analyse met een pagina die stilzwijgend ontbreekt. Vier
+        // keer de timeout, met een bodem van een minuut, laat een oprecht
+        // trage pagina met een korte timeout-instelling met rust terwijl hij
+        // nog in behandeling is.
+        $staleAfterSeconds = max(60, (int) config('dashed-seo.crawler.timeout') * 4);
+
+        $audit->pages()
+            ->where('crawl_status', SiteAuditPage::CRAWL_CRAWLING)
+            ->where('updated_at', '<', now()->subSeconds($staleAfterSeconds))
+            ->update(['crawl_status' => SiteAuditPage::CRAWL_PENDING]);
     }
 
     protected function crawl(SiteAudit $audit, SiteAuditPage $page): void
@@ -249,7 +271,13 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                 'url_hash' => $hash,
                 'type' => $type,
                 'status_code' => $response->status(),
-                'size' => (int) ($response->header('Content-Length') ?: strlen($response->body())),
+                // Niet de Content-Length-header: Guzzle pakt een gzip/br-
+                // gecodeerd antwoord automatisch uit voordat ->body() iets
+                // teruggeeft, dus de header meldt de gecomprimeerde grootte
+                // op de kabel terwijl de checks (css_too_large/js_too_large)
+                // de echte bestandsgrootte willen. De body staat al in het
+                // geheugen op deze regel, dus strlen() kost niets extra.
+                'size' => strlen($response->body()),
                 'compressed' => $response->header('Content-Encoding') !== null,
             ]);
         }
