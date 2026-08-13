@@ -107,6 +107,13 @@ class StartSiteAuditJob implements ShouldQueue
                 'sitemap_url_count' => $sitemapUrlCount,
                 'max_pages' => config('dashed-seo.crawler.max_pages'),
                 'max_depth' => config('dashed-seo.crawler.max_depth'),
+                // CrawlSiteAuditBatchJob draait in een eigen (queue-)proces en
+                // kan dus geen RobotsTxt-instantie van dit object erven: het
+                // moet de regels herbouwen uit settings om ontdekte links
+                // (niet alleen sitemap-url's) tegen robots.txt te toetsen.
+                'robots_disallows' => $robots->disallows(),
+                'robots_allows' => $robots->allowRules(),
+                'robots_unavailable' => $robots->isUnavailable(),
             ]),
         ]);
 

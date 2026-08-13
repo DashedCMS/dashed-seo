@@ -14,6 +14,7 @@ use Dashed\DashedSeo\Crawler\ParsedPage;
 use Dashed\DashedSeo\Models\SiteAuditLink;
 use Dashed\DashedSeo\Models\SiteAuditPage;
 use Dashed\DashedSeo\Models\SiteAuditAsset;
+use Dashed\DashedSeo\Crawler\RobotsTxt;
 use Dashed\DashedSeo\Crawler\ModelResolver;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -123,12 +124,26 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
         $isHtml = $contentType === '' || str_contains($contentType, 'html');
         $parsed = null;
 
+        // Guzzle decodeert een gzip/br-antwoord automatisch (default
+        // decode_content) en hernoemt daarbij Content-Encoding naar
+        // x-encoded-content-encoding, waarna het de originele header
+        // verwijdert (vendor/guzzlehttp/guzzle/src/Handler/EasyHandle.php:102,
+        // vendor/guzzlehttp/guzzle/src/Handler/StreamHandler.php:316). Zonder
+        // de hernoemde header te lezen staat content_encoding hier op elk
+        // echt gecomprimeerd antwoord structureel leeg, en vuurt
+        // no_compression voor elke pagina van elke gecomprimeerde site. Zelfde
+        // aanpak als storeAssets() hieronder.
+        $contentEncoding = $response->header('Content-Encoding');
+        if ($contentEncoding === '') {
+            $contentEncoding = $response->header('x-encoded-content-encoding');
+        }
+
         $attributes = [
             'crawl_status' => SiteAuditPage::CRAWL_DONE,
             'status_code' => $status,
             'response_time_ms' => $elapsed,
             'content_type' => $response->header('Content-Type'),
-            'content_encoding' => $response->header('Content-Encoding'),
+            'content_encoding' => $contentEncoding === '' ? null : $contentEncoding,
             'html_size' => strlen($body),
             'crawled_at' => now(),
             'indexable' => $status === 200,
@@ -187,6 +202,7 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
     {
         $maxPages = $audit->settings['max_pages'] ?? config('dashed-seo.crawler.max_pages');
         $maxDepth = $audit->settings['max_depth'] ?? config('dashed-seo.crawler.max_depth');
+        $robots = $this->robotsFromSettings($audit);
         $rows = [];
 
         foreach ($links as $link) {
@@ -212,14 +228,24 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                 continue;
             }
 
+            $path = parse_url($link['url'], PHP_URL_PATH) ?: '/';
+            // Zelfde behandeling als StartSiteAuditJob geeft aan sitemap-
+            // url's: een pad dat robots.txt verbiedt wordt vastgelegd als
+            // geblokkeerd in plaats van opgehaald. Zonder dit toetste alleen
+            // de sitemap-instroom aan robots.txt, en kroop de crawler gewoon
+            // door naar paden als /winkelwagen of /uitloggen die via gewone
+            // links ontdekt worden.
+            $blocked = ! $robots->allows($path);
+
             SiteAuditPage::firstOrCreate(
                 ['audit_id' => $audit->id, 'url_hash' => UrlNormalizer::hash($link['url'])],
                 [
                     'url' => $link['url'],
-                    'path' => parse_url($link['url'], PHP_URL_PATH) ?: '/',
-                    'crawl_status' => SiteAuditPage::CRAWL_PENDING,
+                    'path' => $path,
+                    'crawl_status' => $blocked ? SiteAuditPage::CRAWL_DONE : SiteAuditPage::CRAWL_PENDING,
                     'depth' => $page->depth + 1,
                     'discovered_from_page_id' => $page->id,
+                    'blocked_by_robots' => $blocked,
                 ]
             );
         }
@@ -227,6 +253,17 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
         foreach (array_chunk($rows, 200) as $chunk) {
             SiteAuditLink::insert($chunk);
         }
+    }
+
+    protected function robotsFromSettings(SiteAudit $audit): RobotsTxt
+    {
+        $settings = $audit->settings ?? [];
+
+        return new RobotsTxt(
+            disallows: $settings['robots_disallows'] ?? [],
+            allows: $settings['robots_allows'] ?? [],
+            unavailable: $settings['robots_unavailable'] ?? false,
+        );
     }
 
     protected function storeAssets(SiteAudit $audit, ParsedPage $parsed): void

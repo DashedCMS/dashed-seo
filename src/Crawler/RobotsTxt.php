@@ -118,6 +118,11 @@ class RobotsTxt
         return $this->disallows;
     }
 
+    public function allowRules(): array
+    {
+        return $this->allows;
+    }
+
     public function sitemaps(): array
     {
         return $this->sitemaps;
