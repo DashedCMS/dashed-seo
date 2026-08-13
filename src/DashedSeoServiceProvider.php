@@ -48,6 +48,13 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Redirects\TemporaryRedirectCheck::class,
             \Dashed\DashedSeo\Checks\Redirects\LongRedirectChainCheck::class,
             \Dashed\DashedSeo\Checks\Redirects\RedirectLoopCheck::class,
+
+            // Sitemap
+            \Dashed\DashedSeo\Checks\Sitemap\SitemapRedirectCheck::class,
+            \Dashed\DashedSeo\Checks\Sitemap\SitemapNoindexCheck::class,
+            \Dashed\DashedSeo\Checks\Sitemap\Sitemap4xxCheck::class,
+            \Dashed\DashedSeo\Checks\Sitemap\SitemapNotInRobotsCheck::class,
+            \Dashed\DashedSeo\Checks\Sitemap\MissingFromSitemapCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }
