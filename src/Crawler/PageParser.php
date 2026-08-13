@@ -84,6 +84,18 @@ class PageParser
             }
         }
 
+        // Vangt rel="icon", rel="shortcut icon" en varianten als
+        // rel="apple-touch-icon": FaviconMissingCheck's eigen how-to-fix-
+        // tekst vraagt precies om zo'n link-element, dus de check moet hem
+        // ook kunnen zien.
+        foreach ($xpath->query('//link[@href][not(ancestor::noscript) and not(ancestor::script) and not(ancestor::style)][contains(translate(@rel, "ICON", "icon"), "icon")]') as $node) {
+            /** @var DOMElement $node */
+            $resolved = UrlNormalizer::normalize($node->getAttribute('href'), $url);
+            if ($resolved !== null) {
+                $page->icons[] = $resolved;
+            }
+        }
+
         foreach ($xpath->query('//a[@href][not(ancestor::noscript) and not(ancestor::script) and not(ancestor::style)]') as $node) {
             /** @var DOMElement $node */
             $resolved = UrlNormalizer::normalize($node->getAttribute('href'), $url);

@@ -19,6 +19,7 @@ class ParsedPage
         public array $images = [],
         public array $stylesheets = [],
         public array $scripts = [],
+        public array $icons = [],
         public array $links = [],
     ) {
     }

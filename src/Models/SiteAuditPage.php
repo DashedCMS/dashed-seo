@@ -30,6 +30,7 @@ class SiteAuditPage extends Model
         'images' => 'array',
         'stylesheets' => 'array',
         'scripts' => 'array',
+        'icons' => 'array',
         'crawled_at' => 'datetime',
     ];
 

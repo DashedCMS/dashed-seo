@@ -21,6 +21,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_13_000004_create_site_audit_findings_table',
                 '2026_08_13_000005_create_site_audit_check_results_table',
                 '2026_08_13_000006_create_site_audit_assets_table',
+                '2026_08_13_000007_add_icons_to_site_audit_pages_table',
             ])
             ->runsMigrations()
             ->hasCommand(\Dashed\DashedSeo\Commands\RunSiteAudit::class);
