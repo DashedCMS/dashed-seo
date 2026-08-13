@@ -42,6 +42,24 @@ class AnalyseSiteAuditJob implements ShouldQueue
             return;
         }
 
+        // Idempotentie in plaats van een transactie: SiteAuditCheckResult::create()
+        // hieronder valt niet binnen een try/catch, en er is geen retry-guard
+        // op deze job. Als er iets misgaat buiten een controle zelf (een
+        // gekilled worker, een fout in AuditComparer, een mislukte update),
+        // blijft de audit op analysing staan met bevindingen en
+        // check-resultaten die al wel gecommit zijn. De volgende poging (een
+        // automatische retry of een handmatige herstart) begint dan niet
+        // schoon: hij zou elke controle die de vorige keer al slaagde
+        // verdubbelen en daarna stuklopen op de unique key van
+        // site_audit_check_results, ongevangen en zonder de logregel die de
+        // per-controle catch hieronder wel zou schrijven. Een transactie zou
+        // dit niet oplossen (een gekilde worker rolt niets terug, en een
+        // transactie over 55 controles en duizenden rijen is bovendien duur),
+        // dus in plaats daarvan ruimt elke poging eerst zijn eigen, mogelijk
+        // halfslachtige eerdere rijen op voordat hij herbouwt.
+        SiteAuditFinding::where('audit_id', $audit->id)->delete();
+        SiteAuditCheckResult::where('audit_id', $audit->id)->delete();
+
         // De crawler laat to_page_id leeg omdat de doelpagina tijdens het
         // crawlen vaak nog geen rij is. broken_external_link,
         // internal_link_to_redirect en internal_link_to_4xx leunen hierop en
