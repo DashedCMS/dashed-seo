@@ -44,11 +44,11 @@ class UrlNormalizer
 
         $query = '';
         if (isset($parts['query'])) {
-            $params = self::parseQuery($parts['query']);
-            $params = array_diff_key($params, array_flip(self::TRACKING_PARAMS));
-            if ($params !== []) {
-                ksort($params);
-                $query = '?' . self::buildQuery($params);
+            $pairs = self::parseQuery($parts['query']);
+            $pairs = array_filter($pairs, fn ($pair) => ! in_array($pair[0], self::TRACKING_PARAMS, true));
+            if ($pairs !== []) {
+                $pairs = self::sortPairs($pairs);
+                $query = '?' . self::buildQuery($pairs);
             }
         }
 
@@ -102,33 +102,58 @@ class UrlNormalizer
 
     protected static function parseQuery(string $query): array
     {
-        $params = [];
-        $pairs = explode('&', $query);
+        $pairs = [];
+        $segments = explode('&', $query);
 
-        foreach ($pairs as $pair) {
-            if ($pair === '') {
+        foreach ($segments as $segment) {
+            if ($segment === '') {
                 continue;
             }
 
-            $parts = explode('=', $pair, 2);
-            $key = urldecode($parts[0]);
-            $value = isset($parts[1]) ? urldecode($parts[1]) : '';
-
-            $params[$key] = $value;
+            if (str_contains($segment, '=')) {
+                $parts = explode('=', $segment, 2);
+                $key = urldecode($parts[0]);
+                $value = urldecode($parts[1]);
+                $pairs[] = [$key, $value, true];
+            } else {
+                $key = urldecode($segment);
+                $pairs[] = [$key, '', false];
+            }
         }
 
-        return $params;
+        return $pairs;
     }
 
-    protected static function buildQuery(array $params): string
+    protected static function sortPairs(array $pairs): array
     {
-        $pairs = [];
-
-        foreach ($params as $key => $value) {
-            $pairs[] = rawurlencode($key) . '=' . rawurlencode($value);
+        $indexed = [];
+        foreach ($pairs as $i => $pair) {
+            $indexed[$i] = $pair;
         }
 
-        return implode('&', $pairs);
+        uasort($indexed, function ($a, $b) {
+            return $a[0] <=> $b[0];
+        });
+
+        return array_values($indexed);
+    }
+
+    protected static function buildQuery(array $pairs): string
+    {
+        $query = [];
+
+        foreach ($pairs as $pair) {
+            [$key, $value, $hasValue] = $pair;
+            $encodedKey = rawurlencode($key);
+
+            if ($hasValue) {
+                $query[] = $encodedKey . '=' . rawurlencode($value);
+            } else {
+                $query[] = $encodedKey;
+            }
+        }
+
+        return implode('&', $query);
     }
 
     protected static function resolve(string $relative, string $base): ?string
