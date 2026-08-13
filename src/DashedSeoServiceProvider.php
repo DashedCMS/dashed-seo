@@ -67,6 +67,15 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\MetaTags\CanonicalMissingCheck::class,
             \Dashed\DashedSeo\Checks\MetaTags\CanonicalPointsElsewhereCheck::class,
             \Dashed\DashedSeo\Checks\MetaTags\CanonicalToNonIndexableCheck::class,
+
+            // Content
+            \Dashed\DashedSeo\Checks\Content\H1MissingCheck::class,
+            \Dashed\DashedSeo\Checks\Content\H1EmptyCheck::class,
+            \Dashed\DashedSeo\Checks\Content\MultipleH1Check::class,
+            \Dashed\DashedSeo\Checks\Content\TitleEqualsH1Check::class,
+            \Dashed\DashedSeo\Checks\Content\MissingAltCheck::class,
+            \Dashed\DashedSeo\Checks\Content\ThinContentCheck::class,
+            \Dashed\DashedSeo\Checks\Content\BrokenImageCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }
