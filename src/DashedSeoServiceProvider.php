@@ -13,6 +13,11 @@ class DashedSeoServiceProvider extends PackageServiceProvider
     {
         $package
             ->name('dashed-seo')
-            ->hasConfigFile();
+            ->hasConfigFile()
+            ->hasMigrations([
+                '2026_08_13_000001_create_site_audits_table',
+                '2026_08_13_000002_create_site_audit_pages_table',
+            ])
+            ->runsMigrations();
     }
 }
