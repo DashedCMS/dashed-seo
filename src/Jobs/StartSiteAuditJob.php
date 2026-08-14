@@ -16,6 +16,7 @@ use Dashed\DashedSeo\Crawler\SitemapReader;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Dashed\DashedSeo\Exceptions\BaseUrlUnresolvableException;
 
 class StartSiteAuditJob implements ShouldQueue
 {
@@ -44,7 +45,18 @@ class StartSiteAuditJob implements ShouldQueue
         ModelResolver::flush();
 
         $configuredBase = rtrim($audit->base_url, '/');
-        $base = $this->resolveEffectiveBaseUrl($configuredBase);
+
+        try {
+            $base = $this->resolveEffectiveBaseUrl($configuredBase);
+        } catch (BaseUrlUnresolvableException) {
+            $audit->update([
+                'status' => SiteAudit::STATUS_FAILED,
+                'failure_reason' => __('De basis-URL :url kon niet worden opgelost, de scan is niet gestart.', ['url' => $configuredBase]),
+                'finished_at' => now(),
+            ]);
+
+            return;
+        }
 
         if ($base === null) {
             $audit->update([
@@ -160,17 +172,30 @@ class StartSiteAuditJob implements ShouldQueue
         // als allow_redirects.track_redirects aanstaat), dus dit is de URI
         // van het verzoek dat het antwoord echt opleverde na het volgen van
         // eventuele redirects. Zonder redirect is dat gewoon $base zelf.
+        //
+        // Als effectiveUri() hier toch null teruggeeft, of als de opgeloste
+        // URL door UrlNormalizer afgewezen wordt, is er geen betrouwbare URL
+        // om de rest van de scan op te baseren. Stilzwijgend $base
+        // teruggeven zou hier precies het symptoom reproduceren dat deze
+        // methode moet voorkomen: een scan die doorzet op het verkeerde
+        // adres en er toch geslaagd uitziet. Daarom gooien we in plaats
+        // daarvan; handle() vangt dit apart op om de audit hardop te laten
+        // mislukken, met een andere reden dan de onbereikbaar-melding
+        // hieronder.
         $effectiveUri = $response->effectiveUri();
         if ($effectiveUri === null) {
-            return $base;
+            throw new BaseUrlUnresolvableException($base);
         }
 
         // Genormaliseerd zodat een meegekomen trailing slash de rootpagina
         // niet onder een andere hash opslaat dan waar de crawl 'm later op
         // zoekt (zie UrlNormalizer::normalize en de root-terugval hieronder).
         $normalized = UrlNormalizer::normalize((string) $effectiveUri, $base);
+        if ($normalized === null) {
+            throw new BaseUrlUnresolvableException($base);
+        }
 
-        return $normalized === null ? $base : rtrim($normalized, '/');
+        return rtrim($normalized, '/');
     }
 
     protected function row(SiteAudit $audit, string $url, bool $inSitemap, RobotsTxt $robots): array
