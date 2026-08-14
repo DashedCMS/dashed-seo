@@ -43,9 +43,10 @@ class StartSiteAuditJob implements ShouldQueue
         // voordat er iets anders met de resolver gebeurt.
         ModelResolver::flush();
 
-        $base = rtrim($audit->base_url, '/');
+        $configuredBase = rtrim($audit->base_url, '/');
+        $base = $this->resolveEffectiveBaseUrl($configuredBase);
 
-        if (! $this->baseUrlAnswers($base)) {
+        if ($base === null) {
             $audit->update([
                 'status' => SiteAudit::STATUS_FAILED,
                 'failure_reason' => __('De basis-URL is niet bereikbaar, de scan is niet gestart.'),
@@ -99,6 +100,7 @@ class StartSiteAuditJob implements ShouldQueue
 
         $audit->update([
             'status' => SiteAudit::STATUS_CRAWLING,
+            'base_url' => $base,
             'started_at' => now(),
             'heartbeat_at' => now(),
             'urls_found' => count($rows),
@@ -114,23 +116,61 @@ class StartSiteAuditJob implements ShouldQueue
                 'robots_disallows' => $robots->disallows(),
                 'robots_allows' => $robots->allowRules(),
                 'robots_unavailable' => $robots->isUnavailable(),
+                // De URL zoals de gebruiker/instellingen 'm hebben opgegeven,
+                // voordat de bereikbaarheidscheck hierboven eventueel een
+                // redirect volgde. base_url zelf wordt hierboven al op de
+                // opgeloste versie gezet (nodig omdat CrawlSiteAuditBatchJob
+                // in een eigen proces draait en $audit->base_url vers uit de
+                // database leest), dus zonder dit apart vast te leggen is
+                // nergens meer te zien dat er uberhaupt een redirect gevolgd is.
+                'base_url_configured' => $configuredBase,
             ]),
         ]);
 
         CrawlSiteAuditBatchJob::dispatch($audit->id);
     }
 
-    protected function baseUrlAnswers(string $base): bool
+    // De bereikbaarheidscheck volgt redirects (Http::get()'s standaardgedrag),
+    // terwijl CrawlSiteAuditBatchJob dat bewust niet doet: die legt een
+    // redirect vast als bevinding in plaats van 'm te volgen. Een basis-URL
+    // die doorstuurt naar zijn canonieke vorm (http naar https, apex naar
+    // www) is de vorm van bijna elke echte site, dus zonder dit hier op te
+    // lossen ziet deze check een gezonde 200 op de uiteindelijke URL, terwijl
+    // de crawl daarna meteen strandt op de eerste hop en nul pagina's
+    // bezoekt. Deze methode geeft daarom niet alleen bereikbaar/onbereikbaar
+    // terug, maar de URL waar het verzoek daadwerkelijk op uitkwam, zodat de
+    // rest van de scan (robots.txt, sitemap, geheugen van bezochte pagina's)
+    // op diezelfde URL verder werkt.
+    protected function resolveEffectiveBaseUrl(string $base): ?string
     {
         try {
             $response = Http::timeout(config('dashed-seo.crawler.timeout'))
                 ->withHeaders(['User-Agent' => config('dashed-seo.crawler.user_agent')])
                 ->get($base);
         } catch (\Throwable) {
-            return false;
+            return null;
         }
 
-        return $response->status() < 500;
+        if ($response->status() >= 500) {
+            return null;
+        }
+
+        // effectiveUri() komt van Guzzle's TransferStats, die Laravel's
+        // PendingRequest via de on_stats-optie altijd meestuurt (niet alleen
+        // als allow_redirects.track_redirects aanstaat), dus dit is de URI
+        // van het verzoek dat het antwoord echt opleverde na het volgen van
+        // eventuele redirects. Zonder redirect is dat gewoon $base zelf.
+        $effectiveUri = $response->effectiveUri();
+        if ($effectiveUri === null) {
+            return $base;
+        }
+
+        // Genormaliseerd zodat een meegekomen trailing slash de rootpagina
+        // niet onder een andere hash opslaat dan waar de crawl 'm later op
+        // zoekt (zie UrlNormalizer::normalize en de root-terugval hieronder).
+        $normalized = UrlNormalizer::normalize((string) $effectiveUri, $base);
+
+        return $normalized === null ? $base : rtrim($normalized, '/');
     }
 
     protected function row(SiteAudit $audit, string $url, bool $inSitemap, RobotsTxt $robots): array
