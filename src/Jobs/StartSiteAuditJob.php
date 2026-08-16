@@ -97,6 +97,14 @@ class StartSiteAuditJob implements ShouldQueue
 
         $sitemapUrls = SitemapReader::urls($base, $robots->sitemaps());
 
+        // Het ruwe aantal adressen dat de sitemap opleverde, voor normalisatie
+        // en ontdubbeling. Zonder dit is een sitemap waarvan elke regel afvalt
+        // (bijvoorbeeld omdat ze naar een staging-host wijzen) in de
+        // opgeslagen gegevens niet te onderscheiden van een site zonder
+        // sitemap, en ziet de scan er geslaagd uit terwijl hij bijna niets
+        // gezien heeft.
+        $sitemapRowsSeen = count($sitemapUrls);
+
         $rows = [];
         foreach ($sitemapUrls as $url) {
             $normalized = UrlNormalizer::normalize($url, $base);
@@ -129,6 +137,7 @@ class StartSiteAuditJob implements ShouldQueue
             'settings' => array_merge($audit->settings ?? [], $settings->toSnapshot(), [
                 'robots_has_sitemap' => $robots->sitemaps() !== [],
                 'sitemap_url_count' => $sitemapUrlCount,
+                'sitemap_rows_seen' => $sitemapRowsSeen,
                 // CrawlSiteAuditBatchJob draait in een eigen (queue-)proces en
                 // kan dus geen RobotsTxt-instantie van dit object erven: het
                 // moet de regels herbouwen uit settings om ontdekte links
