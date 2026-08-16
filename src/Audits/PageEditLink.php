@@ -25,10 +25,17 @@ final class PageEditLink
                 continue;
             }
 
-            // Niet elke resource heeft een bewerkscherm, en een resource die
-            // deze gebruiker niet mag zien moet geen link opleveren die op een
-            // foutmelding uitkomt.
+            // Niet elke resource heeft een bewerkscherm.
             if (! array_key_exists('edit', $resource::getPages())) {
+                return null;
+            }
+
+            $record = $page->model_type::find($page->model_id);
+
+            // Het model kan intussen verwijderd zijn, en een gebruiker zonder
+            // bewerkrecht op dit record moet geen knop krijgen die toch op
+            // Filament's eigen abort_unless(canEdit(...), 403) uitkomt.
+            if (! $record || ! $resource::canEdit($record)) {
                 return null;
             }
 
