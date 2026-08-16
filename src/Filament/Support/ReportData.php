@@ -6,6 +6,7 @@ namespace Dashed\DashedSeo\Filament\Support;
 
 use Dashed\DashedSeo\SeoCheckRegistry;
 use Dashed\DashedSeo\Models\SiteAudit;
+use Dashed\DashedSeo\Audits\PageEditLink;
 
 /**
  * Het rapport uit de database halen, los van de weergave. De Blade-bestanden
@@ -15,6 +16,23 @@ final class ReportData
 {
     /** Zwaarder telt eerst bij het sorteren van de grootste problemen. */
     protected const SEVERITY_ORDER = ['error' => 3, 'warning' => 2, 'notice' => 1];
+
+    /**
+     * De negen secties in de vaste volgorde van het rapport. De volgorde komt
+     * hier vandaan en niet uit de database, want anders bepaalt de toevallige
+     * registratievolgorde van de controles hoe het rapport eruitziet.
+     */
+    public const SECTIONS = [
+        'crawling' => 'Crawlen en indexatie',
+        'redirects' => 'Doorverwijzingen',
+        'sitemap' => 'Sitemap',
+        'meta_tags' => 'Meta tags',
+        'content' => 'Inhoud',
+        'localisation' => 'Talen',
+        'speed' => 'Snelheid',
+        'assets' => 'CSS en JavaScript',
+        'links' => 'Links',
+    ];
 
     /** @return array<string, mixed> */
     public static function cover(SiteAudit $audit): array
@@ -53,6 +71,83 @@ final class ReportData
             'urls_found' => (int) $audit->urls_found,
             'top' => $top,
             'warnings_list' => self::warnings($audit),
+        ];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public static function sections(SiteAudit $audit): array
+    {
+        $registry = app(SeoCheckRegistry::class);
+        $results = $audit->checkResults()->get()->groupBy('section');
+
+        $sections = [];
+
+        foreach (self::SECTIONS as $key => $label) {
+            $checks = ($results[$key] ?? collect())
+                // Een controle die niets vond hoort niet in het rapport: het
+                // voorbeeldrapport toont ook alleen wat er aan de hand is.
+                ->filter(fn ($result): bool => (int) $result->count > 0)
+                ->sortByDesc(fn ($result): array => [
+                    self::SEVERITY_ORDER[$result->severity] ?? 0,
+                    $result->count,
+                ])
+                ->map(fn ($result): array => [
+                    'check_key' => $result->check_key,
+                    'label' => $registry->check($result->check_key)?->label() ?? $result->check_key,
+                    'severity' => $result->severity,
+                    'count' => (int) $result->count,
+                    'new_count' => (int) $result->new_count,
+                    'resolved_count' => (int) $result->resolved_count,
+                ])
+                ->values()
+                ->all();
+
+            $sections[] = [
+                'key' => $key,
+                'label' => __($label),
+                'checks' => $checks,
+                'total' => array_sum(array_column($checks, 'count')),
+            ];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * De getroffen adressen van een enkele controle, met de uitleg erbij.
+     *
+     * @return array<string, mixed>
+     */
+    public static function findings(SiteAudit $audit, string $checkKey, int $limit = 100): array
+    {
+        $check = app(SeoCheckRegistry::class)->check($checkKey);
+
+        $query = $audit->findings()->where('check_key', $checkKey);
+
+        $total = (clone $query)->count();
+
+        $rows = $query
+            ->with('page')
+            ->orderByDesc('is_new')
+            ->orderBy('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn ($finding): array => [
+                'url' => $finding->url ?: $finding->page?->url,
+                'is_new' => (bool) $finding->is_new,
+                'context' => $finding->context ?? [],
+                'edit_url' => $finding->page ? PageEditLink::for($finding->page) : null,
+            ])
+            ->all();
+
+        return [
+            'label' => $check?->label() ?? $checkKey,
+            'description' => $check?->description() ?? '',
+            'how_to_fix' => $check?->howToFix() ?? '',
+            'rows' => $rows,
+            // Zonder dit getal leest een afgekapte lijst als de volledige
+            // lijst, en dan lijkt het probleem kleiner dan het is.
+            'remaining' => max(0, $total - count($rows)),
         ];
     }
 
