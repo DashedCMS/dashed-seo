@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages;
 
+use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
 use Dashed\DashedSeo\Filament\Support\ReportData;
@@ -34,9 +35,15 @@ class ViewSiteAuditReport extends Page
         ]);
     }
 
-    // De kopactie "Per pagina bekijken" hoort hier, maar komt pas in taak 9:
-    // de route 'pages' bestaat nu nog niet, en een kopactie die naar een
-    // niet-bestaande route wijst laat dit scherm meteen klappen.
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('pages')
+                ->label(__('Per pagina bekijken'))
+                ->icon('heroicon-o-table-cells')
+                ->url(fn (): string => SiteAuditResource::getUrl('pages', ['record' => $this->getRecord()])),
+        ];
+    }
 
     /** Welke controle op dit moment uitgeklapt is, of null. */
     public ?string $openCheck = null;

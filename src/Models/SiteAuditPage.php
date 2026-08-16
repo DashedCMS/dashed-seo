@@ -7,6 +7,7 @@ namespace Dashed\DashedSeo\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SiteAuditPage extends Model
 {
@@ -37,6 +38,11 @@ class SiteAuditPage extends Model
     public function audit(): BelongsTo
     {
         return $this->belongsTo(SiteAudit::class, 'audit_id');
+    }
+
+    public function findings(): HasMany
+    {
+        return $this->hasMany(SiteAuditFinding::class, 'page_id');
     }
 
     public function scopePending(Builder $query): Builder

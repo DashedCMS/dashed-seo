@@ -15,6 +15,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ListSiteAudits;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ViewSiteAuditReport;
+use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ListSiteAuditPages;
 
 class SiteAuditResource extends Resource
 {
@@ -127,6 +128,7 @@ class SiteAuditResource extends Resource
         return [
             'index' => ListSiteAudits::route('/'),
             'report' => ViewSiteAuditReport::route('/{record}/rapport'),
+            'pages' => ListSiteAuditPages::route('/{record}/paginas'),
         ];
     }
 }
