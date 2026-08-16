@@ -66,6 +66,22 @@ class SiteAudit extends Model
         return $this->hasMany(SiteAuditAsset::class, 'audit_id');
     }
 
+    /**
+     * De vorige afgeronde scan van dezelfde site. Het verschil met deze scan
+     * is wat het rapport bovenaan zet: de score zelf beweegt weinig, de
+     * beweging is wat er iets zegt.
+     */
+    public function previous(): ?self
+    {
+        return self::query()
+            ->where('site_id', $this->site_id)
+            ->where('status', self::STATUS_COMPLETED)
+            ->where('id', '<', $this->id)
+            ->orderByDesc('finished_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
     public function isRunning(): bool
     {
         return in_array($this->status, self::runningStatuses(), true);

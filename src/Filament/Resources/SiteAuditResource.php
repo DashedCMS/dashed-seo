@@ -14,6 +14,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ListSiteAudits;
+use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ViewSiteAuditReport;
 
 class SiteAuditResource extends Resource
 {
@@ -92,7 +93,7 @@ class SiteAuditResource extends Resource
                     ->label(__('Rapport'))
                     ->icon('heroicon-o-document-chart-bar')
                     ->visible(fn (SiteAudit $record): bool => $record->status === SiteAudit::STATUS_COMPLETED)
-                    ->url(fn (SiteAudit $record): string => static::getUrl('index', ['record' => $record])),
+                    ->url(fn (SiteAudit $record): string => static::getUrl('report', ['record' => $record])),
                 Action::make('cancel')
                     ->label(__('Afbreken'))
                     ->icon('heroicon-o-x-circle')
@@ -125,6 +126,7 @@ class SiteAuditResource extends Resource
     {
         return [
             'index' => ListSiteAudits::route('/'),
+            'report' => ViewSiteAuditReport::route('/{record}/rapport'),
         ];
     }
 }
