@@ -16,6 +16,20 @@ class SiteAudit extends Model
     public const STATUS_FAILED = 'failed';
     public const STATUS_CANCELLED = 'cancelled';
 
+    /**
+     * De statussen waarin een scan bezig is. Dit is de enige lijst; de guard,
+     * de knop, het commando en de jobs lezen hem hier. Uit de nieuwsbriefmodule
+     * is de les meegekomen dat drie plekken die elk hun eigen lijst overtypen
+     * vroeg of laat uiteenlopen, en dan start er iets wat volgens het scherm
+     * niet kan starten.
+     *
+     * @return array<int, string>
+     */
+    public static function runningStatuses(): array
+    {
+        return [self::STATUS_PENDING, self::STATUS_CRAWLING, self::STATUS_ANALYSING];
+    }
+
     protected $table = 'dashed__site_audits';
 
     protected $guarded = [];
@@ -54,6 +68,6 @@ class SiteAudit extends Model
 
     public function isRunning(): bool
     {
-        return in_array($this->status, [self::STATUS_PENDING, self::STATUS_CRAWLING, self::STATUS_ANALYSING], true);
+        return in_array($this->status, self::runningStatuses(), true);
     }
 }
