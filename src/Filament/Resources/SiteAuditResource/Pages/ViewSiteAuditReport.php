@@ -38,9 +38,31 @@ class ViewSiteAuditReport extends Page
     // de route 'pages' bestaat nu nog niet, en een kopactie die naar een
     // niet-bestaande route wijst laat dit scherm meteen klappen.
 
+    /** Welke controle op dit moment uitgeklapt is, of null. */
+    public ?string $openCheck = null;
+
     /** @return array<string, mixed> */
     public function cover(): array
     {
         return ReportData::cover($this->getRecord());
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    public function sections(): array
+    {
+        return ReportData::sections($this->getRecord());
+    }
+
+    public function toggleCheck(string $checkKey): void
+    {
+        // Een enkele controle tegelijk open: de lijsten kunnen honderd rijen
+        // lang zijn en alles tegelijk uitklappen maakt de pagina onbruikbaar.
+        $this->openCheck = $this->openCheck === $checkKey ? null : $checkKey;
+    }
+
+    /** @return array<string, mixed>|null */
+    public function openFindings(): ?array
+    {
+        return $this->openCheck ? ReportData::findings($this->getRecord(), $this->openCheck) : null;
     }
 }
