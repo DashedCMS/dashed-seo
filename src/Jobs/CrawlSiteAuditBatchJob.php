@@ -65,7 +65,11 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
             $audit->update([
                 'status' => SiteAudit::STATUS_ANALYSING,
                 'heartbeat_at' => now(),
-                'pages_crawled' => $audit->pages()->where('crawl_status', SiteAuditPage::CRAWL_DONE)->count(),
+                'pages_crawled' => $audit->pages()
+                    ->where('crawl_status', SiteAuditPage::CRAWL_DONE)
+                    ->where('blocked_by_robots', false)
+                    ->count(),
+                'pages_blocked' => $audit->pages()->where('blocked_by_robots', true)->count(),
             ]);
 
             AnalyseSiteAuditJob::dispatch($audit->id);
