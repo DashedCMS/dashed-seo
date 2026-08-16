@@ -6,6 +6,7 @@ namespace Dashed\DashedSeo;
 
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Dashed\DashedSeo\Filament\Pages\Settings\DashedSeoSettingsPage;
 
 class DashedSeoServiceProvider extends PackageServiceProvider
 {
@@ -25,6 +26,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_14_000008_add_pages_blocked_to_site_audits_table',
             ])
             ->runsMigrations()
+            ->hasViews()
             ->hasCommands([
                 \Dashed\DashedSeo\Commands\RunSiteAudit::class,
                 \Dashed\DashedSeo\Commands\RunSiteAudits::class,
@@ -56,6 +58,17 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 ->weeklyOn(1, '04:30')
                 ->withoutOverlapping();
         });
+
+        cms()->builder('plugins', array_merge(cms()->builder('plugins') ?: [], [
+            new DashedSeoPlugin(),
+        ]));
+
+        cms()->registerSettingsPage(
+            DashedSeoSettingsPage::class,
+            'Sitescan',
+            'magnifying-glass-circle',
+            'Basis-URL, limieten en drempelwaarden voor de technische sitescan'
+        );
 
         $registry = $this->app->make(SeoCheckRegistry::class);
 
