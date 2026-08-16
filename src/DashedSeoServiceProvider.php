@@ -22,6 +22,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_13_000005_create_site_audit_check_results_table',
                 '2026_08_13_000006_create_site_audit_assets_table',
                 '2026_08_13_000007_add_icons_to_site_audit_pages_table',
+                '2026_08_14_000008_add_pages_blocked_to_site_audits_table',
             ])
             ->runsMigrations()
             ->hasCommands([
