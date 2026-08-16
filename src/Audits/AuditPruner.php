@@ -37,6 +37,12 @@ final class AuditPruner
             SiteAudit::query()
                 ->where('site_id', $site['id'])
                 ->whereNotIn('id', $keepIds)
+                // Een lopende scan staat nooit in de bewaarlijst hierboven
+                // (die filtert op STATUS_COMPLETED) maar heeft tijdens het
+                // crawlen wel al pagina's. Zonder dit filter trekt het
+                // wekelijkse uitkleden de werkvoorraad onder een scan vandaan
+                // die nog bezig is.
+                ->whereNotIn('status', SiteAudit::runningStatuses())
                 // Een scan die al is uitgekleed heeft geen pagina's meer, dus
                 // die hoeft niet elke week opnieuw langs.
                 ->whereHas('pages')
