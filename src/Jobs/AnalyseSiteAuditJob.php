@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Illuminate\Queue\SerializesModels;
 use Dashed\DashedSeo\SeoCheckRegistry;
+use Dashed\DashedSeo\Settings\AuditSettings;
 use Illuminate\Queue\InteractsWithQueue;
 use Dashed\DashedSeo\Models\SiteAuditFinding;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -41,6 +42,10 @@ class AnalyseSiteAuditJob implements ShouldQueue
             // bevindingen dubbel weg te schrijven.
             return;
         }
+
+        // De drempels waarmee deze scan is gestart, niet die van vandaag: dat
+        // is wat een oud rapport uitlegbaar houdt.
+        AuditSettings::fromAudit($audit)->apply();
 
         // Idempotentie in plaats van een transactie: SiteAuditCheckResult::create()
         // hieronder valt niet binnen een try/catch, en er is geen retry-guard

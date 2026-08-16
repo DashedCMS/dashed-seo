@@ -17,6 +17,7 @@ use Dashed\DashedSeo\Models\SiteAuditAsset;
 use Dashed\DashedSeo\Crawler\RobotsTxt;
 use Dashed\DashedSeo\Crawler\ModelResolver;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
+use Dashed\DashedSeo\Settings\AuditSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 
@@ -38,6 +39,10 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
         if (! $audit || $audit->status !== SiteAudit::STATUS_CRAWLING) {
             return;
         }
+
+        // Deze job draait in een eigen proces met een verse configuratie, dus
+        // de limieten van deze scan moeten er hier opnieuw op.
+        AuditSettings::fromAudit($audit)->apply();
 
         // ModelResolver::resolve() warmt lazy en houdt de cache daarna vast
         // voor de rest van het PHP-proces (zie de contract-uitleg op de

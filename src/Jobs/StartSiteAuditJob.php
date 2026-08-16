@@ -14,6 +14,7 @@ use Dashed\DashedSeo\Models\SiteAuditPage;
 use Dashed\DashedSeo\Crawler\ModelResolver;
 use Dashed\DashedSeo\Crawler\SitemapReader;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
+use Dashed\DashedSeo\Settings\AuditSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Dashed\DashedSeo\Exceptions\BaseUrlUnresolvableException;
@@ -44,7 +45,16 @@ class StartSiteAuditJob implements ShouldQueue
         // voordat er iets anders met de resolver gebeurt.
         ModelResolver::flush();
 
-        $configuredBase = rtrim($audit->base_url, '/');
+        // De instellingen van deze site bepalen vanaf hier alles: de limieten
+        // die de crawler leest, en de drempels waarmee de controles oordelen.
+        $settings = AuditSettings::forSite($audit->site_id);
+        $settings->apply();
+
+        // De basis-URL op de scan wint van de instelling: het commando en de
+        // knop zetten hem daar al op de gewenste waarde, en een scan die is
+        // gestart voor een adres moet dat adres houden ook als iemand de
+        // instelling ondertussen wijzigt.
+        $configuredBase = rtrim($audit->base_url ?: $settings->baseUrl, '/');
 
         try {
             $base = $this->resolveEffectiveBaseUrl($configuredBase);
@@ -116,11 +126,9 @@ class StartSiteAuditJob implements ShouldQueue
             'started_at' => now(),
             'heartbeat_at' => now(),
             'urls_found' => count($rows),
-            'settings' => array_merge($audit->settings ?? [], [
+            'settings' => array_merge($audit->settings ?? [], $settings->toSnapshot(), [
                 'robots_has_sitemap' => $robots->sitemaps() !== [],
                 'sitemap_url_count' => $sitemapUrlCount,
-                'max_pages' => config('dashed-seo.crawler.max_pages'),
-                'max_depth' => config('dashed-seo.crawler.max_depth'),
                 // CrawlSiteAuditBatchJob draait in een eigen (queue-)proces en
                 // kan dus geen RobotsTxt-instantie van dit object erven: het
                 // moet de regels herbouwen uit settings om ontdekte links
