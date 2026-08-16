@@ -24,7 +24,11 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_13_000007_add_icons_to_site_audit_pages_table',
             ])
             ->runsMigrations()
-            ->hasCommand(\Dashed\DashedSeo\Commands\RunSiteAudit::class);
+            ->hasCommands([
+                \Dashed\DashedSeo\Commands\RunSiteAudit::class,
+                \Dashed\DashedSeo\Commands\RunSiteAudits::class,
+                \Dashed\DashedSeo\Commands\PruneSiteAudits::class,
+            ]);
     }
 
     public function packageRegistered(): void
@@ -34,6 +38,24 @@ class DashedSeoServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
+        $this->app->booted(function (): void {
+            $schedule = app(\Illuminate\Console\Scheduling\Schedule::class);
+
+            // Vegen elk uur, niet wekelijks: een vastgelopen handmatige scan
+            // zou de site anders tot een week lang op slot houden.
+            $schedule->command('dashed:run-site-audits --sweep-only')
+                ->hourly()
+                ->withoutOverlapping();
+
+            $schedule->command('dashed:run-site-audits')
+                ->weeklyOn(1, '03:00')
+                ->withoutOverlapping();
+
+            $schedule->command('dashed:prune-site-audits')
+                ->weeklyOn(1, '04:30')
+                ->withoutOverlapping();
+        });
+
         $registry = $this->app->make(SeoCheckRegistry::class);
 
         foreach ([
