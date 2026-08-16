@@ -159,6 +159,13 @@ class AnalyseSiteAuditJob implements ShouldQueue
                 'count' => $count,
             ]);
 
+            // Deze job draait alle controles in een keer. Zonder deze
+            // tussentijdse controle loopt een afgebroken scan alsnog tot het
+            // eind door en schrijft hij zijn score weg over de afbreking heen.
+            if ($audit->fresh()?->status !== SiteAudit::STATUS_ANALYSING) {
+                return;
+            }
+
             $audit->update(['heartbeat_at' => now()]);
         }
 

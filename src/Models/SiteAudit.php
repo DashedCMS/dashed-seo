@@ -70,4 +70,24 @@ class SiteAudit extends Model
     {
         return in_array($this->status, self::runningStatuses(), true);
     }
+
+    /**
+     * Breekt een lopende scan af. Geeft false terug als er niets af te breken
+     * viel, zodat de knop niet hoeft te gokken of het gelukt is. De jobs
+     * stoppen vanzelf: ze controleren de status voordat ze verder gaan.
+     */
+    public function cancel(?string $reason = null): bool
+    {
+        if (! $this->isRunning()) {
+            return false;
+        }
+
+        $this->update([
+            'status' => self::STATUS_CANCELLED,
+            'failure_reason' => $reason ?: __('De scan is handmatig afgebroken.'),
+            'finished_at' => now(),
+        ]);
+
+        return true;
+    }
 }
