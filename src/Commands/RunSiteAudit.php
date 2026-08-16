@@ -6,6 +6,7 @@ namespace Dashed\DashedSeo\Commands;
 
 use Illuminate\Console\Command;
 use Dashed\DashedCore\Classes\Sites;
+use Dashed\DashedSeo\Audits\AuditGuard;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Jobs\StartSiteAuditJob;
 use Dashed\DashedSeo\Jobs\AnalyseSiteAuditJob;
@@ -21,33 +22,19 @@ class RunSiteAudit extends Command
     {
         $requestedSiteId = $this->argument('site');
         $siteId = $requestedSiteId ?: Sites::getActive();
-        $baseUrl = rtrim(config('app.url'), '/');
 
-        // De basis-URL komt altijd uit de applicatieconfiguratie, ongeacht
-        // welke site is opgegeven: een echte per-site basis-URL is een
-        // latere plan-stap, geen zaak van dit commando om te verzinnen. Op
-        // een multi-site installatie zou dat anders stilzwijgend een rapport
-        // opleveren dat gelabeld is voor de ene site maar de crawl van een
-        // andere bevat. Alleen luid zijn is hier het juiste, geen gok naar
-        // de echte basis-URL van de opgegeven site.
-        if ($requestedSiteId && $requestedSiteId !== Sites::getActive()) {
-            // Bewust $this->line() met een eigen kleurtag in plaats van
-            // $this->warn(): Symfony's warn() rendert een geblokte melding
-            // die op terminalbreedte woord-afbreekt, wat de URL of de
-            // sitenaam middenin een tekst zou kunnen doorknippen.
-            $this->line('<fg=yellow>' . __(
-                'Site :site is opgegeven, maar de basis-URL komt nog uit de applicatieconfiguratie en niet van de opgegeven site zelf.',
-                ['site' => $requestedSiteId]
-            ) . '</>');
-            $this->line('<fg=yellow>' . __('Er wordt :url gecrawld.', ['url' => $baseUrl]) . '</>');
+        // De basis-URL komt nu uit de instellingen van de opgegeven site, niet
+        // meer uit de applicatieconfiguratie. Daarmee vervalt ook de
+        // waarschuwing die hier stond over een site-argument dat niets deed.
+        $audit = AuditGuard::claim($siteId, 'manual');
+
+        if (! $audit) {
+            $this->error(AuditGuard::problem($siteId) ?? __('De scan kon niet gestart worden.'));
+
+            return self::FAILURE;
         }
 
-        $audit = SiteAudit::create([
-            'site_id' => $siteId,
-            'base_url' => $baseUrl,
-            'status' => SiteAudit::STATUS_PENDING,
-            'trigger' => 'manual',
-        ]);
+        $baseUrl = $audit->base_url;
 
         if (! $this->option('sync')) {
             StartSiteAuditJob::dispatch($audit->id);
