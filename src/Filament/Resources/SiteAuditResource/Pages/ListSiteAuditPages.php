@@ -116,7 +116,11 @@ class ListSiteAuditPages extends Page implements HasTable
                     ]),
                 Filter::make('problems')
                     ->label(__('Alleen pagina\'s met problemen'))
-                    ->query(fn (Builder $query): Builder => $query->having('findings_count', '>', 0)),
+                    // having('findings_count', ...) na withCount werkt op MySQL
+                    // maar geeft op SQLite (de testdriver) "HAVING clause on a
+                    // non-aggregate query". whereHas leunt op de relatie zelf
+                    // en werkt op beide.
+                    ->query(fn (Builder $query): Builder => $query->whereHas('findings')),
                 Filter::make('blocked')
                     ->label(__('Door robots.txt afgeschermd'))
                     ->query(fn (Builder $query): Builder => $query->where('blocked_by_robots', true)),
