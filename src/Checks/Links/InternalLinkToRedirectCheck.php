@@ -23,7 +23,7 @@ class InternalLinkToRedirectCheck extends BaseCheck
             ->join('dashed__site_audit_pages', 'dashed__site_audit_pages.id', '=', 'dashed__site_audit_links.to_page_id')
             ->whereBetween('dashed__site_audit_pages.status_code', [300, 399])
             ->orderBy('dashed__site_audit_links.from_page_id')
-            ->select(['dashed__site_audit_links.from_page_id', 'dashed__site_audit_links.to_url', 'dashed__site_audit_links.to_url_hash'])
+            ->select(['dashed__site_audit_links.from_page_id', 'dashed__site_audit_links.to_url', 'dashed__site_audit_links.to_url_hash', 'dashed__site_audit_links.anchor'])
             ->get();
 
         // Twee links vanaf dezelfde pagina naar hetzelfde doel zijn een ding om te
@@ -40,7 +40,7 @@ class InternalLinkToRedirectCheck extends BaseCheck
             $page = SiteAuditPage::find($link->from_page_id);
 
             if ($page !== null) {
-                yield $this->finding($page, ['target' => $link->to_url]);
+                yield $this->finding($page, ['target' => $link->to_url, 'anchor' => $link->anchor]);
             }
         }
     }

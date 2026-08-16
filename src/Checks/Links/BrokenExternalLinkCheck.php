@@ -49,7 +49,7 @@ class BrokenExternalLinkCheck extends BaseCheck
             $page = SiteAuditPage::find($link->from_page_id);
 
             if ($page !== null) {
-                yield $this->finding($page, ['target' => $link->to_url]);
+                yield $this->finding($page, ['target' => $link->to_url, 'anchor' => $link->anchor]);
             }
         }
     }
