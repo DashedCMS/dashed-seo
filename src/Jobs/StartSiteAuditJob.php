@@ -8,15 +8,15 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\Http;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
 use Dashed\DashedSeo\Crawler\RobotsTxt;
+use Illuminate\Queue\InteractsWithQueue;
 use Dashed\DashedSeo\Models\SiteAuditPage;
 use Dashed\DashedSeo\Crawler\ModelResolver;
 use Dashed\DashedSeo\Crawler\SitemapReader;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
-use Dashed\DashedSeo\Settings\AuditSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Dashed\DashedSeo\Settings\AuditSettings;
 use Dashed\DashedSeo\Exceptions\BaseUrlUnresolvableException;
 
 class StartSiteAuditJob implements ShouldQueue
@@ -28,7 +28,6 @@ class StartSiteAuditJob implements ShouldQueue
 
     public function __construct(public int $auditId)
     {
-        $this->onQueue('seo');
     }
 
     public function handle(): void

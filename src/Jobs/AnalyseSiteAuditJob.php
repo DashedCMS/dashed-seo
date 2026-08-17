@@ -7,17 +7,17 @@ namespace Dashed\DashedSeo\Jobs;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\Log;
 use Dashed\DashedSeo\Models\SiteAudit;
-use Illuminate\Queue\SerializesModels;
 use Dashed\DashedSeo\SeoCheckRegistry;
-use Dashed\DashedSeo\Settings\AuditSettings;
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
-use Dashed\DashedSeo\Models\SiteAuditFinding;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Dashed\DashedSeo\Analysis\AuditComparer;
-use Dashed\DashedSeo\Models\SiteAuditCheckResult;
-use Dashed\DashedSeo\Checks\Support\LinkResolver;
+use Dashed\DashedSeo\Settings\AuditSettings;
+use Dashed\DashedSeo\Models\SiteAuditFinding;
 use Dashed\DashedSeo\Analysis\SeoScoreCalculator;
+use Dashed\DashedSeo\Checks\Support\LinkResolver;
+use Dashed\DashedSeo\Models\SiteAuditCheckResult;
 use Dashed\DashedSeo\Checks\Support\ExternalLinkChecker;
 
 class AnalyseSiteAuditJob implements ShouldQueue
@@ -29,7 +29,6 @@ class AnalyseSiteAuditJob implements ShouldQueue
 
     public function __construct(public int $auditId)
     {
-        $this->onQueue('seo');
     }
 
     public function handle(): void

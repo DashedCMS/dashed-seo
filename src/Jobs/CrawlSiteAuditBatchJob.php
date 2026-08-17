@@ -8,18 +8,18 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\Http;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Queue\InteractsWithQueue;
+use Dashed\DashedSeo\Crawler\RobotsTxt;
 use Dashed\DashedSeo\Crawler\PageParser;
 use Dashed\DashedSeo\Crawler\ParsedPage;
+use Illuminate\Queue\InteractsWithQueue;
 use Dashed\DashedSeo\Models\SiteAuditLink;
 use Dashed\DashedSeo\Models\SiteAuditPage;
-use Dashed\DashedSeo\Models\SiteAuditAsset;
-use Dashed\DashedSeo\Crawler\RobotsTxt;
 use Dashed\DashedSeo\Crawler\ModelResolver;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
-use Dashed\DashedSeo\Settings\AuditSettings;
+use Dashed\DashedSeo\Models\SiteAuditAsset;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Dashed\DashedSeo\Settings\AuditSettings;
 
 class CrawlSiteAuditBatchJob implements ShouldQueue
 {
@@ -30,7 +30,6 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
 
     public function __construct(public int $auditId)
     {
-        $this->onQueue('seo');
     }
 
     public function handle(): void
