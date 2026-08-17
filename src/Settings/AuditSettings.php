@@ -54,7 +54,10 @@ final class AuditSettings
         }
 
         return new self(
-            baseUrl: rtrim((string) self::setting('site_audit_base_url', $siteId, config('app.url')), '/'),
+            // Het adres van de website zelf, niet iets aparts om in te vullen.
+            // Een site kent in het CMS geen eigen adres, dus dit is per
+            // definitie hetzelfde adres waarop de applicatie draait.
+            baseUrl: rtrim((string) config('app.url'), '/'),
             maxPages: (int) self::setting('site_audit_max_pages', $siteId, config('dashed-seo.crawler.max_pages')),
             maxDepth: (int) self::setting('site_audit_max_depth', $siteId, config('dashed-seo.crawler.max_depth')),
             delayMs: (int) self::setting('site_audit_delay_ms', $siteId, config('dashed-seo.crawler.delay_ms')),

@@ -22,7 +22,7 @@ final class AuditGuard
         $siteId = $siteId ?: Sites::getActive();
 
         if (AuditSettings::forSite($siteId)->baseUrl === '') {
-            return __('Er is geen basis-URL ingesteld voor deze site.');
+            return __('De website heeft geen adres (APP_URL), dus er is niets om te scannen.');
         }
 
         $running = self::running($siteId);
