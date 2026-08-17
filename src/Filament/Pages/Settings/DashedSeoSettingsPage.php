@@ -29,7 +29,7 @@ class DashedSeoSettingsPage extends Page
 
     protected static ?string $navigationLabel = 'Sitescan instellingen';
 
-    protected static string | UnitEnum | null $navigationGroup = 'Systeem';
+    protected static string | UnitEnum | null $navigationGroup = 'SEO & site';
 
     protected static ?string $title = 'Sitescan instellingen';
 
@@ -77,16 +77,14 @@ class DashedSeoSettingsPage extends Page
                         ->columnSpanFull(),
                     TextInput::make("site_audit_max_pages_{$id}")
                         ->label(__('Maximaal aantal pagina\'s'))
-                        ->helperText(__('De scan stopt met ontdekken zodra dit aantal is bereikt.'))
+                        ->helperText(__('De scan stopt met ontdekken zodra dit aantal is bereikt. Leeg of 0 betekent geen limiet, dus de hele site.'))
                         ->numeric()
-                        ->minValue(1)
-                        ->required(),
+                        ->minValue(0),
                     TextInput::make("site_audit_max_depth_{$id}")
                         ->label(__('Maximale diepte'))
-                        ->helperText(__('Hoeveel klikken vanaf de startpagina de scan doorloopt.'))
+                        ->helperText(__('Hoeveel klikken vanaf de startpagina de scan doorloopt. Leeg of 0 betekent geen grens.'))
                         ->numeric()
-                        ->minValue(1)
-                        ->required(),
+                        ->minValue(0),
                     TextInput::make("site_audit_delay_ms_{$id}")
                         ->label(__('Vertraging tussen verzoeken in milliseconden'))
                         ->helperText(__('Hoger zetten als de site het zwaar krijgt van de scan.'))
@@ -140,7 +138,17 @@ class DashedSeoSettingsPage extends Page
             $id = $site['id'];
 
             foreach (['base_url', 'max_pages', 'max_depth', 'delay_ms', 'weekly', 'stale_after_minutes'] as $name) {
-                Customsetting::set("site_audit_{$name}", $formState["site_audit_{$name}_{$id}"] ?? null, $id);
+                $value = $formState["site_audit_{$name}_{$id}"] ?? null;
+
+                // Een leeg limietveld wordt vastgelegd als 0, oftewel geen
+                // limiet. Zou het als lege waarde opgeslagen worden, dan valt
+                // AuditSettings terug op de standaard en scant de site alsnog
+                // maar tot een grens die de beheerder net heeft weggehaald.
+                if (in_array($name, ['max_pages', 'max_depth'], true) && ($value === null || $value === '')) {
+                    $value = 0;
+                }
+
+                Customsetting::set("site_audit_{$name}", $value, $id);
             }
 
             foreach (AuditSettings::THRESHOLD_KEYS as $key) {

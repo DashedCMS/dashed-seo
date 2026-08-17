@@ -223,10 +223,18 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
 
     protected function storeLinks(SiteAudit $audit, SiteAuditPage $page, array $links): void
     {
-        $maxPages = $audit->settings['max_pages'] ?? config('dashed-seo.crawler.max_pages');
-        $maxDepth = $audit->settings['max_depth'] ?? config('dashed-seo.crawler.max_depth');
+        // Nul is hier geen grens van nul maar "geen grens": een site die
+        // volledig gescand moet worden zet de limiet uit in plaats van een
+        // getal te moeten verzinnen dat hoog genoeg is.
+        $maxPages = (int) ($audit->settings['max_pages'] ?? config('dashed-seo.crawler.max_pages'));
+        $maxDepth = (int) ($audit->settings['max_depth'] ?? config('dashed-seo.crawler.max_depth'));
         $robots = $this->robotsFromSettings($audit);
         $rows = [];
+
+        // Eén keer tellen en daarna zelf bijhouden. Deze lus draait per link op
+        // elke pagina, dus een count() per link is op een grote site duizenden
+        // extra queries voor een getal dat alleen hierbinnen verandert.
+        $pagesKnown = $maxPages > 0 ? $audit->pages()->count() : 0;
 
         foreach ($links as $link) {
             $isExternal = ! UrlNormalizer::isSameHost($link['url'], $audit->base_url);
@@ -243,11 +251,11 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                 'is_image_link' => $link['is_image_link'],
             ];
 
-            if ($isExternal || $page->depth >= $maxDepth) {
+            if ($isExternal || ($maxDepth > 0 && $page->depth >= $maxDepth)) {
                 continue;
             }
 
-            if ($audit->pages()->count() >= $maxPages) {
+            if ($maxPages > 0 && $pagesKnown >= $maxPages) {
                 continue;
             }
 
@@ -260,7 +268,7 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
             // links ontdekt worden.
             $blocked = ! $robots->allows($path);
 
-            SiteAuditPage::firstOrCreate(
+            $discovered = SiteAuditPage::firstOrCreate(
                 ['audit_id' => $audit->id, 'url_hash' => UrlNormalizer::hash($link['url'])],
                 [
                     'url' => $link['url'],
@@ -271,6 +279,10 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                     'blocked_by_robots' => $blocked,
                 ]
             );
+
+            if ($discovered->wasRecentlyCreated) {
+                $pagesKnown++;
+            }
         }
 
         foreach (array_chunk($rows, 200) as $chunk) {

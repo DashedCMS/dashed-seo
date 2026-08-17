@@ -2,7 +2,10 @@
 
 return [
     'crawler' => [
-        'max_pages' => 500,
+        // 0 betekent geen limiet. Een webshop met duizenden producten moet
+        // volledig gescand kunnen worden, dus de standaard is ruim genoeg voor
+        // een gewone shop en per site op 0 te zetten voor "scan alles".
+        'max_pages' => 5000,
         'max_depth' => 5,
         'delay_ms' => 200,
         'timeout' => 15,

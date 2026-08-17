@@ -189,7 +189,10 @@ final class ReportData
             ]);
         }
 
-        if ((int) $audit->pages_crawled >= (int) ($settings['max_pages'] ?? PHP_INT_MAX)) {
+        $maxPages = (int) ($settings['max_pages'] ?? PHP_INT_MAX);
+
+        // Nul is geen limiet, dus dan valt er ook niets te waarschuwen.
+        if ($maxPages > 0 && (int) $audit->pages_crawled >= $maxPages) {
             $warnings[] = __('De paginalimiet van :limiet is bereikt, dus de site is mogelijk niet helemaal gescand.', [
                 'limiet' => $settings['max_pages'],
             ]);
