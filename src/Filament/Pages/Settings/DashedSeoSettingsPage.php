@@ -9,15 +9,17 @@ use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Dashed\DashedCore\Classes\Sites;
-use Filament\Schemas\Components\Tabs;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Tabs\Tab;
+use Filament\Forms\Components\Placeholder;
 use Dashed\DashedCore\Models\Customsetting;
 use Dashed\DashedSeo\Settings\AuditSettings;
 use Dashed\DashedCore\Traits\HasSettingsPermission;
+use Dashed\DashedSeo\Filament\Actions\ScanNowAction;
 
 class DashedSeoSettingsPage extends Page
 {
@@ -37,6 +39,18 @@ class DashedSeoSettingsPage extends Page
 
     public array $data = [];
 
+    /**
+     * Dezelfde knop als op het sitescans-overzicht. Wie hier de limieten of
+     * drempelwaarden aanpast wil meteen zien wat dat oplevert, zonder eerst
+     * een ander scherm op te moeten zoeken.
+     */
+    protected function getHeaderActions(): array
+    {
+        return [
+            ScanNowAction::make(),
+        ];
+    }
+
     public function mount(): void
     {
         $formData = [];
@@ -44,7 +58,6 @@ class DashedSeoSettingsPage extends Page
         foreach (Sites::getSites() as $site) {
             $settings = AuditSettings::forSite($site['id']);
 
-            $formData["site_audit_base_url_{$site['id']}"] = $settings->baseUrl;
             $formData["site_audit_max_pages_{$site['id']}"] = $settings->maxPages;
             $formData["site_audit_max_depth_{$site['id']}"] = $settings->maxDepth;
             $formData["site_audit_delay_ms_{$site['id']}"] = $settings->delayMs;
@@ -69,11 +82,10 @@ class DashedSeoSettingsPage extends Page
             $tabs[] = Tab::make($id)
                 ->label(ucfirst($site['name']))
                 ->schema([
-                    TextInput::make("site_audit_base_url_{$id}")
-                        ->label(__('Basis-URL'))
-                        ->helperText(__('Het adres waar de scan begint. Een site kent in het CMS geen eigen adres, dus dit moet je hier opgeven.'))
-                        ->url()
-                        ->required()
+                    Placeholder::make("site_audit_base_url_{$id}")
+                        ->label(__('Adres van de website'))
+                        ->helperText(__('Hier begint de scan. Dit is het adres van de website zelf en is daarom niet apart in te stellen.'))
+                        ->content(AuditSettings::forSite($id)->baseUrl)
                         ->columnSpanFull(),
                     TextInput::make("site_audit_max_pages_{$id}")
                         ->label(__('Maximaal aantal pagina\'s'))
@@ -137,7 +149,7 @@ class DashedSeoSettingsPage extends Page
         foreach (Sites::getSites() as $site) {
             $id = $site['id'];
 
-            foreach (['base_url', 'max_pages', 'max_depth', 'delay_ms', 'weekly', 'stale_after_minutes'] as $name) {
+            foreach (['max_pages', 'max_depth', 'delay_ms', 'weekly', 'stale_after_minutes'] as $name) {
                 $value = $formState["site_audit_{$name}_{$id}"] ?? null;
 
                 // Een leeg limietveld wordt vastgelegd als 0, oftewel geen
