@@ -9,7 +9,7 @@ use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Dashed\DashedCore\Classes\Sites;
-use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Tabs;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -61,7 +61,7 @@ class DashedSeoSettingsPage extends Page
             $formData["site_audit_max_pages_{$site['id']}"] = $settings->maxPages;
             $formData["site_audit_max_depth_{$site['id']}"] = $settings->maxDepth;
             $formData["site_audit_delay_ms_{$site['id']}"] = $settings->delayMs;
-            $formData["site_audit_weekly_{$site['id']}"] = $settings->weekly;
+            $formData["site_audit_frequency_{$site['id']}"] = $settings->frequency;
             $formData["site_audit_stale_after_minutes_{$site['id']}"] = $settings->staleAfterMinutes;
 
             foreach (AuditSettings::THRESHOLD_KEYS as $key) {
@@ -109,8 +109,17 @@ class DashedSeoSettingsPage extends Page
                         ->numeric()
                         ->minValue(1)
                         ->required(),
-                    Toggle::make("site_audit_weekly_{$id}")
-                        ->label(__('Elke week automatisch scannen'))
+                    Select::make("site_audit_frequency_{$id}")
+                        ->label(__('Automatisch scannen'))
+                        ->helperText(__('Hoe vaak de scan vanzelf draait. Je krijgt na elke scan een melding in de app.'))
+                        ->options([
+                            AuditSettings::FREQUENCY_NEVER => __('Nooit'),
+                            AuditSettings::FREQUENCY_DAILY => __('Elke dag'),
+                            AuditSettings::FREQUENCY_WEEKLY => __('Elke week'),
+                            AuditSettings::FREQUENCY_MONTHLY => __('Elke maand'),
+                        ])
+                        ->selectablePlaceholder(false)
+                        ->required()
                         ->columnSpanFull(),
                     Fieldset::make(__('Drempelwaarden'))
                         ->schema([
@@ -149,7 +158,7 @@ class DashedSeoSettingsPage extends Page
         foreach (Sites::getSites() as $site) {
             $id = $site['id'];
 
-            foreach (['max_pages', 'max_depth', 'delay_ms', 'weekly', 'stale_after_minutes'] as $name) {
+            foreach (['max_pages', 'max_depth', 'delay_ms', 'frequency', 'stale_after_minutes'] as $name) {
                 $value = $formState["site_audit_{$name}_{$id}"] ?? null;
 
                 // Een leeg limietveld wordt vastgelegd als 0, oftewel geen

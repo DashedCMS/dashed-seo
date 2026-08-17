@@ -17,6 +17,22 @@ use Dashed\DashedCore\Models\Customsetting;
  */
 final class AuditSettings
 {
+    public const FREQUENCY_NEVER = 'nooit';
+    public const FREQUENCY_DAILY = 'dagelijks';
+    public const FREQUENCY_WEEKLY = 'wekelijks';
+    public const FREQUENCY_MONTHLY = 'maandelijks';
+
+    /** @return array<int, string> */
+    public static function frequencies(): array
+    {
+        return [
+            self::FREQUENCY_NEVER,
+            self::FREQUENCY_DAILY,
+            self::FREQUENCY_WEEKLY,
+            self::FREQUENCY_MONTHLY,
+        ];
+    }
+
     /** Elke drempel uit config('dashed-seo.thresholds') is per site in te stellen. */
     public const THRESHOLD_KEYS = [
         'title_max',
@@ -35,7 +51,7 @@ final class AuditSettings
         public readonly int $maxPages,
         public readonly int $maxDepth,
         public readonly int $delayMs,
-        public readonly bool $weekly,
+        public readonly string $frequency,
         public readonly int $staleAfterMinutes,
         /** @var array<string, int> */
         public readonly array $thresholds,
@@ -61,7 +77,7 @@ final class AuditSettings
             maxPages: (int) self::setting('site_audit_max_pages', $siteId, config('dashed-seo.crawler.max_pages')),
             maxDepth: (int) self::setting('site_audit_max_depth', $siteId, config('dashed-seo.crawler.max_depth')),
             delayMs: (int) self::setting('site_audit_delay_ms', $siteId, config('dashed-seo.crawler.delay_ms')),
-            weekly: (bool) self::setting('site_audit_weekly', $siteId, false),
+            frequency: self::frequency($siteId),
             staleAfterMinutes: (int) self::setting(
                 'site_audit_stale_after_minutes',
                 $siteId,
@@ -90,7 +106,7 @@ final class AuditSettings
             maxPages: (int) ($stored['max_pages'] ?? config('dashed-seo.crawler.max_pages')),
             maxDepth: (int) ($stored['max_depth'] ?? config('dashed-seo.crawler.max_depth')),
             delayMs: (int) ($stored['delay_ms'] ?? config('dashed-seo.crawler.delay_ms')),
-            weekly: (bool) ($stored['weekly'] ?? false),
+            frequency: (string) ($stored['frequency'] ?? self::FREQUENCY_NEVER),
             staleAfterMinutes: (int) ($stored['stale_after_minutes'] ?? config('dashed-seo.retention.stale_after_minutes')),
             thresholds: $thresholds,
         );
@@ -103,7 +119,7 @@ final class AuditSettings
             'max_pages' => $this->maxPages,
             'max_depth' => $this->maxDepth,
             'delay_ms' => $this->delayMs,
-            'weekly' => $this->weekly,
+            'frequency' => $this->frequency,
             'stale_after_minutes' => $this->staleAfterMinutes,
             'thresholds' => $this->thresholds,
         ];
@@ -118,6 +134,25 @@ final class AuditSettings
         foreach ($this->thresholds as $key => $value) {
             config()->set("dashed-seo.thresholds.{$key}", $value);
         }
+    }
+
+    /**
+     * De ingestelde frequentie, met de oude aan/uit-schakelaar als terugval.
+     * Sites die "elke week automatisch scannen" aan hadden staan houden hun
+     * wekelijkse scan; zonder deze terugval zou die stilletjes stoppen op het
+     * moment dat deze versie geïnstalleerd wordt.
+     */
+    protected static function frequency(?string $siteId): string
+    {
+        $stored = (string) self::setting('site_audit_frequency', $siteId, '');
+
+        if (in_array($stored, self::frequencies(), true)) {
+            return $stored;
+        }
+
+        return self::setting('site_audit_weekly', $siteId, false)
+            ? self::FREQUENCY_WEEKLY
+            : self::FREQUENCY_NEVER;
     }
 
     protected static function setting(string $name, ?string $siteId, mixed $default): mixed

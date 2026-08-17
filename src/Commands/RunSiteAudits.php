@@ -7,21 +7,21 @@ namespace Dashed\DashedSeo\Commands;
 use Illuminate\Console\Command;
 use Dashed\DashedCore\Classes\Sites;
 use Dashed\DashedSeo\Audits\AuditGuard;
+use Dashed\DashedSeo\Audits\AuditSchedule;
 use Dashed\DashedSeo\Audits\AuditSweeper;
 use Dashed\DashedSeo\Jobs\StartSiteAuditJob;
-use Dashed\DashedSeo\Settings\AuditSettings;
 
 class RunSiteAudits extends Command
 {
     protected $signature = 'dashed:run-site-audits {--sweep-only : Alleen vastgelopen scans opruimen}';
 
-    protected $description = 'Vastgelopen scans opruimen en de wekelijkse sitescans starten';
+    protected $description = 'Vastgelopen scans opruimen en de geplande sitescans starten';
 
     public function handle(): int
     {
-        // Vegen gaat altijd eerst, en over alle sites, ook die zonder
-        // wekelijkse scan: anders blijft een handmatig gestarte scan die is
-        // blijven hangen voorgoed staan op zo'n site.
+        // Vegen gaat altijd eerst, en over alle sites, ook die zonder geplande
+        // scan: anders blijft een handmatig gestarte scan die is blijven hangen
+        // voorgoed staan op zo'n site.
         $swept = AuditSweeper::sweep();
 
         if ($swept > 0) {
@@ -33,7 +33,7 @@ class RunSiteAudits extends Command
         }
 
         foreach (Sites::getSites() as $site) {
-            if (! AuditSettings::forSite($site['id'])->weekly) {
+            if (! AuditSchedule::isDue($site['id'])) {
                 continue;
             }
 
