@@ -48,6 +48,13 @@ return [
         'description' => 'Robots.txt verbiedt het ophalen van deze pagina, waardoor zoekmachines de inhoud en de meta-richtlijnen niet kunnen zien.',
         'how_to_fix' => 'Haal het pad uit robots.txt als de pagina wel gevonden moet worden, en gebruik anders noindex op de pagina zelf.',
     ],
+    'only_found_via_cms' => [
+        'section' => 'crawling',
+        'severity' => 'warning',
+        'label' => 'Alleen bekend in het CMS',
+        'description' => 'Deze pagina staat in het CMS op zichtbaar, maar staat niet in de sitemap en er linkt niets naartoe. Een bezoeker of zoekmachine komt er dus nooit vanzelf op uit.',
+        'how_to_fix' => 'Zet de pagina in de sitemap en link ernaar vanuit een menu, een overzicht of een andere pagina. Hoort hij niet gevonden te worden, zet hem dan op niet zichtbaar of op noindex.',
+    ],
 
     // Redirects
     'status_3xx' => [

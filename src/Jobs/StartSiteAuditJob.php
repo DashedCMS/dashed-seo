@@ -120,9 +120,37 @@ class StartSiteAuditJob implements ShouldQueue
         // een sitemap is om iets in te missen.
         $sitemapUrlCount = count($rows);
 
-        if ($rows === []) {
+        // De terugval op de startpagina hangt aan de sitemap, niet aan de
+        // voorraad als geheel: met alleen adressen uit het CMS zou de homepage
+        // anders nooit gescand worden, en juist daar begint het linkenspoor.
+        if ($sitemapUrlCount === 0) {
             $root = UrlNormalizer::normalize($base . '/', $base);
             $rows[UrlNormalizer::hash($root)] = $this->row($audit, $root, false, $robots);
+        }
+
+        // Derde bron naast de sitemap en de links: wat het CMS zelf aan
+        // zichtbare modellen kent. Een pagina die nergens in de sitemap staat
+        // en waar niets naartoe linkt zou anders buiten de scan blijven, en dan
+        // ontbreekt hij in het rapport in plaats van dat hij opvalt.
+        $cmsUrlCount = 0;
+        foreach (ModelResolver::urls($audit->site_id) as $url) {
+            $normalized = UrlNormalizer::normalize($url, $base);
+            if ($normalized === null || ! UrlNormalizer::isSameHost($normalized, $base)) {
+                continue;
+            }
+
+            $hash = UrlNormalizer::hash($normalized);
+            $cmsUrlCount++;
+
+            if (isset($rows[$hash])) {
+                // Staat al in de sitemap: dan is dit geen aparte vondst, maar
+                // de herkomst is wel de moeite waard voor de controle hieronder.
+                $rows[$hash]['from_cms'] = true;
+
+                continue;
+            }
+
+            $rows[$hash] = $this->row($audit, $normalized, false, $robots, true);
         }
 
         SiteAuditPage::insert(array_values($rows));
@@ -137,6 +165,7 @@ class StartSiteAuditJob implements ShouldQueue
                 'robots_has_sitemap' => $robots->sitemaps() !== [],
                 'sitemap_url_count' => $sitemapUrlCount,
                 'sitemap_rows_seen' => $sitemapRowsSeen,
+                'cms_url_count' => $cmsUrlCount,
                 // CrawlSiteAuditBatchJob draait in een eigen (queue-)proces en
                 // kan dus geen RobotsTxt-instantie van dit object erven: het
                 // moet de regels herbouwen uit settings om ontdekte links
@@ -214,7 +243,7 @@ class StartSiteAuditJob implements ShouldQueue
         return rtrim($normalized, '/');
     }
 
-    protected function row(SiteAudit $audit, string $url, bool $inSitemap, RobotsTxt $robots): array
+    protected function row(SiteAudit $audit, string $url, bool $inSitemap, RobotsTxt $robots, bool $fromCms = false): array
     {
         $path = parse_url($url, PHP_URL_PATH) ?: '/';
 
@@ -226,6 +255,9 @@ class StartSiteAuditJob implements ShouldQueue
             'crawl_status' => $robots->allows($path) ? SiteAuditPage::CRAWL_PENDING : SiteAuditPage::CRAWL_DONE,
             'depth' => 0,
             'in_sitemap' => $inSitemap,
+            // Elke rij krijgt deze sleutel, ook als hij false is: een bulk-insert
+            // met verschillende kolommen per rij is op MySQL een fout.
+            'from_cms' => $fromCms,
             'blocked_by_robots' => ! $robots->allows($path),
             'created_at' => now(),
             'updated_at' => now(),

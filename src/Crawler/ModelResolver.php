@@ -29,6 +29,15 @@ class ModelResolver
      */
     protected static array $cache = [];
 
+    /**
+     * De volledige adressen per site, in dezelfde warmup opgebouwd. Apart van
+     * $cache omdat die op pad staat en resolve() precies de koppeling hoort
+     * terug te geven en niets meer.
+     *
+     * @var array<string, array<int, string>>
+     */
+    protected static array $urls = [];
+
     public static function resolve(string $url, string $siteId): ?array
     {
         if (! array_key_exists($siteId, self::$cache)) {
@@ -41,6 +50,22 @@ class ModelResolver
     }
 
     /**
+     * Elk adres dat het CMS voor deze site kent, uit de gekoppelde modellen.
+     * Dit is wat de site volgens de beheeromgeving zou moeten hebben, los van
+     * wat de sitemap noemt of waar iets naartoe linkt.
+     *
+     * @return array<int, string>
+     */
+    public static function urls(string $siteId): array
+    {
+        if (! array_key_exists($siteId, self::$cache)) {
+            self::warm($siteId);
+        }
+
+        return self::$urls[$siteId] ?? [];
+    }
+
+    /**
      * Wist de volledige cache, voor alle sites. Nodig tussen twee audits in
      * hetzelfde proces (bijvoorbeeld een queue worker die meerdere sites na
      * elkaar crawlt), anders blijft de cache van eerdere sites in het
@@ -49,11 +74,13 @@ class ModelResolver
     public static function flush(): void
     {
         self::$cache = [];
+        self::$urls = [];
     }
 
     protected static function warm(string $siteId): void
     {
         self::$cache[$siteId] = [];
+        self::$urls[$siteId] = [];
 
         $site = Sites::get($siteId);
         $localeIds = collect($site['locales'] ?? [])->pluck('id')->all();
@@ -98,10 +125,14 @@ class ModelResolver
                         // koppeling. Zeldzaam (twee modellen met identiek pad), maar
                         // deterministisch: registratievolgorde van routeModels,
                         // daarna oplopende id.
-                        self::$cache[$siteId][self::key($url)] ??= [
-                            'model_type' => $class,
-                            'model_id' => (string) $model->getKey(),
-                        ];
+                        if (! isset(self::$cache[$siteId][self::key($url)])) {
+                            self::$cache[$siteId][self::key($url)] = [
+                                'model_type' => $class,
+                                'model_id' => (string) $model->getKey(),
+                            ];
+
+                            self::$urls[$siteId][] = $url;
+                        }
                     }
                 }
             }

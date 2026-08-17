@@ -24,6 +24,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_13_000006_create_site_audit_assets_table',
                 '2026_08_13_000007_add_icons_to_site_audit_pages_table',
                 '2026_08_14_000008_add_pages_blocked_to_site_audits_table',
+                '2026_08_17_000009_add_from_cms_to_site_audit_pages_table',
             ])
             ->runsMigrations()
             ->hasViews()
@@ -50,8 +51,12 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 ->hourly()
                 ->withoutOverlapping();
 
+            // Elke nacht kijken wie er aan de beurt is. De frequentie staat per
+            // site in de instellingen (dagelijks, wekelijks, maandelijks), dus
+            // een vaste dag in de week hier zou dagelijks scannen onmogelijk
+            // maken.
             $schedule->command('dashed:run-site-audits')
-                ->weeklyOn(1, '03:00')
+                ->dailyAt('03:00')
                 ->withoutOverlapping();
 
             $schedule->command('dashed:prune-site-audits')
@@ -80,6 +85,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Crawling\BlockedByNoindexCheck::class,
             \Dashed\DashedSeo\Checks\Crawling\BlockedByNofollowCheck::class,
             \Dashed\DashedSeo\Checks\Crawling\BlockedByRobotsCheck::class,
+            \Dashed\DashedSeo\Checks\Crawling\OnlyFoundViaCmsCheck::class,
 
             // Redirects
             \Dashed\DashedSeo\Checks\Redirects\Status3xxCheck::class,

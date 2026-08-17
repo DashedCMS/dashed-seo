@@ -22,6 +22,7 @@ class SiteAuditPage extends Model
 
     protected $casts = [
         'in_sitemap' => 'boolean',
+        'from_cms' => 'boolean',
         'blocked_by_robots' => 'boolean',
         'indexable' => 'boolean',
         'redirect_chain' => 'array',
