@@ -65,7 +65,16 @@ class SeoScoreCalculator
         }
 
         $score = 100 * max(0.0, 1 - ($penalty / $total));
+        $rounded = (int) round(min(100, $score));
 
-        return (int) round(min(100, $score));
+        // Een scan met een bevinding mag nooit als een schone honderd lezen.
+        // Hoe meer controles er zijn, hoe kleiner het aandeel van één controle
+        // in het totale gewicht, en dan poetst het afronden een echt probleem
+        // weg tot een perfect cijfer.
+        if ($penalty > 0.0 && $rounded >= 100) {
+            return 99;
+        }
+
+        return $rounded;
     }
 }
