@@ -13,6 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Dashed\DashedSeo\Analysis\AuditComparer;
+use Dashed\DashedSeo\Events\SiteAuditCompleted;
 use Dashed\DashedSeo\Settings\AuditSettings;
 use Dashed\DashedSeo\Models\SiteAuditFinding;
 use Dashed\DashedSeo\Analysis\SeoScoreCalculator;
@@ -235,5 +236,9 @@ class AnalyseSiteAuditJob implements ShouldQueue
                 'score_check_severities' => $scoreCheckSeverities,
             ]),
         ]);
+
+        // Pas na de update, zodat een luisteraar het cijfer en de aantallen van
+        // deze scan ziet en niet die van de vorige.
+        SiteAuditCompleted::dispatch($audit->fresh());
     }
 }
