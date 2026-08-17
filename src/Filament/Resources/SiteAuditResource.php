@@ -23,7 +23,7 @@ class SiteAuditResource extends Resource
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-magnifying-glass-circle';
 
-    protected static string | UnitEnum | null $navigationGroup = 'Systeem';
+    protected static string | UnitEnum | null $navigationGroup = 'SEO & site';
 
     protected static ?string $navigationLabel = 'Sitescans';
 
@@ -31,7 +31,7 @@ class SiteAuditResource extends Resource
 
     protected static ?string $pluralModelLabel = 'sitescans';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 10;
 
     public static function canCreate(): bool
     {
