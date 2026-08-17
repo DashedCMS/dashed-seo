@@ -6,8 +6,8 @@ namespace Dashed\DashedSeo\Commands;
 
 use Illuminate\Console\Command;
 use Dashed\DashedCore\Classes\Sites;
-use Dashed\DashedSeo\Audits\AuditGuard;
 use Dashed\DashedSeo\Models\SiteAudit;
+use Dashed\DashedSeo\Audits\AuditGuard;
 use Dashed\DashedSeo\Jobs\StartSiteAuditJob;
 use Dashed\DashedSeo\Jobs\AnalyseSiteAuditJob;
 use Dashed\DashedSeo\Jobs\CrawlSiteAuditBatchJob;

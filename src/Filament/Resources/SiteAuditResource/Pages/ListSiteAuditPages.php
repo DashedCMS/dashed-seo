@@ -8,16 +8,16 @@ use Filament\Tables\Table;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Filament\Tables\Filters\Filter;
-use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Contracts\HasTable;
+use Dashed\DashedSeo\Audits\PageEditLink;
 use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Builder;
+use Dashed\DashedSeo\Models\SiteAuditPage;
 use Illuminate\Contracts\Support\Htmlable;
 use Filament\Tables\Concerns\InteractsWithTable;
-use Filament\Tables\Contracts\HasTable;
-use Dashed\DashedSeo\Models\SiteAuditPage;
-use Dashed\DashedSeo\Audits\PageEditLink;
-use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource;
+use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 
 class ListSiteAuditPages extends Page implements HasTable
 {

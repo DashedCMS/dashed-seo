@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Checks\Speed;
 
-use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Checks\BaseCheck;
+use Dashed\DashedSeo\Models\SiteAudit;
 
 class SlowResponseCheck extends BaseCheck
 {

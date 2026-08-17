@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Filament\Support;
 
-use Dashed\DashedSeo\SeoCheckRegistry;
 use Dashed\DashedSeo\Models\SiteAudit;
+use Dashed\DashedSeo\SeoCheckRegistry;
 use Dashed\DashedSeo\Audits\PageEditLink;
 
 /**

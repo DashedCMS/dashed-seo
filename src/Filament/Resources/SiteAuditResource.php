@@ -10,12 +10,12 @@ use Filament\Tables\Table;
 use Filament\Actions\Action;
 use Filament\Resources\Resource;
 use Dashed\DashedCore\Classes\Sites;
+use Dashed\DashedSeo\Models\SiteAudit;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
-use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ListSiteAudits;
-use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ViewSiteAuditReport;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ListSiteAuditPages;
+use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ViewSiteAuditReport;
 
 class SiteAuditResource extends Resource
 {

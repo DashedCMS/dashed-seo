@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Checks\Assets;
 
-use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Checks\BaseCheck;
-use Dashed\DashedSeo\Models\SiteAuditAsset;
+use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
+use Dashed\DashedSeo\Models\SiteAuditAsset;
 
 class CssNotCompressedCheck extends BaseCheck
 {

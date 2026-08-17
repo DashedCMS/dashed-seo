@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Crawler;
 
-use Dashed\DashedCore\Classes\Locales;
 use Dashed\DashedCore\Classes\Sites;
+use Dashed\DashedCore\Classes\Locales;
 
 class ModelResolver
 {

@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Checks\Crawling;
 
-use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Checks\BaseCheck;
-use Dashed\DashedSeo\Models\SiteAuditPage;
+use Dashed\DashedSeo\Models\SiteAudit;
 
 class BlockedByNofollowCheck extends BaseCheck
 {

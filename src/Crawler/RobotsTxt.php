@@ -59,7 +59,7 @@ class RobotsTxt
 
             if ($field === 'user-agent') {
                 // Transition from directives back to user-agent: finalize previous group
-                if (!$inUserAgentBlock && !empty($currentGroupAgents)) {
+                if (! $inUserAgentBlock && ! empty($currentGroupAgents)) {
                     if (in_array('*', $currentGroupAgents)) {
                         $disallows = array_merge($disallows, $currentGroupDisallows);
                         $allows = array_merge($allows, $currentGroupAllows);
@@ -100,7 +100,7 @@ class RobotsTxt
         }
 
         // Finalize the last group
-        if (!empty($currentGroupAgents) && in_array('*', $currentGroupAgents)) {
+        if (! empty($currentGroupAgents) && in_array('*', $currentGroupAgents)) {
             $disallows = array_merge($disallows, $currentGroupDisallows);
             $allows = array_merge($allows, $currentGroupAllows);
         }

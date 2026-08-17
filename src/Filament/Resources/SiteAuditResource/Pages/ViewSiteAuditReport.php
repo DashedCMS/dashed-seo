@@ -8,8 +8,8 @@ use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
 use Dashed\DashedSeo\Filament\Support\ReportData;
-use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource;
+use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 
 class ViewSiteAuditReport extends Page
 {

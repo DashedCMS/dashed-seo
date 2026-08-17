@@ -6,8 +6,8 @@ namespace Dashed\DashedSeo\Checks;
 
 use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Contracts\SeoCheck;
-use Dashed\DashedSeo\Models\SiteAuditPage;
 use Illuminate\Database\Eloquent\Builder;
+use Dashed\DashedSeo\Models\SiteAuditPage;
 
 abstract class BaseCheck implements SeoCheck
 {

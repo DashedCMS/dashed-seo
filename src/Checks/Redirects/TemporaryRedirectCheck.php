@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Checks\Redirects;
 
-use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Checks\BaseCheck;
-use Dashed\DashedSeo\Checks\Support\RedirectWalker;
+use Dashed\DashedSeo\Models\SiteAudit;
 
 class TemporaryRedirectCheck extends BaseCheck
 {

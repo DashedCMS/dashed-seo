@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Dashed\DashedSeo\Checks\Links;
 
 use Illuminate\Support\Facades\Http;
-use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\Checks\BaseCheck;
+use Dashed\DashedSeo\Models\SiteAudit;
 
 class FaviconMissingCheck extends BaseCheck
 {
