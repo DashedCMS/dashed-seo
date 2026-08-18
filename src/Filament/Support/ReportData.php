@@ -18,6 +18,15 @@ final class ReportData
     protected const SEVERITY_ORDER = ['error' => 3, 'warning' => 2, 'notice' => 1];
 
     /**
+     * Hoeveel adressen per controle in de PDF komen. Zonder grens draaide een
+     * scan met duizenden bevindingen alles in een keer in het geheugen: ruim
+     * honderdzestig megabyte aan rapportgegevens voordat de PDF-bouwer ook maar
+     * begon, terwijl de queue-worker op honderdachtentwintig staat. Het aantal
+     * dat wegvalt staat onder de lijst, dus een afgekapte lijst blijft eerlijk.
+     */
+    public const PDF_FINDINGS_PER_CHECK = 100;
+
+    /**
      * De negen secties in de vaste volgorde van het rapport. De volgorde komt
      * hier vandaan en niet uit de database, want anders bepaalt de toevallige
      * registratievolgorde van de controles hoe het rapport eruitziet.
@@ -133,7 +142,7 @@ final class ReportData
 
             $section['checks'] = array_map(
                 fn (array $check): array => $check + [
-                    'findings' => self::findings($audit, $check['check_key'], null),
+                    'findings' => self::findings($audit, $check['check_key'], self::PDF_FINDINGS_PER_CHECK, false),
                 ],
                 $section['checks'],
             );
@@ -151,9 +160,14 @@ final class ReportData
      * De getroffen adressen van een enkele controle, met de uitleg erbij. Een
      * limiet van null haalt alles op.
      *
+     * $withEditLinks staat uit voor de PDF: een bewerklink kost per bevinding
+     * een zoektocht langs alle Filament-resources plus een find() op het model,
+     * en in een PDF is er niets om op te klikken. Op een scan van driehonderd
+     * pagina's waren dat ruim vierduizend queries voor niets.
+     *
      * @return array<string, mixed>
      */
-    public static function findings(SiteAudit $audit, string $checkKey, ?int $limit = 100): array
+    public static function findings(SiteAudit $audit, string $checkKey, ?int $limit = 100, bool $withEditLinks = true): array
     {
         $check = app(SeoCheckRegistry::class)->check($checkKey);
 
@@ -171,7 +185,7 @@ final class ReportData
                 'url' => $finding->url ?: $finding->page?->url,
                 'is_new' => (bool) $finding->is_new,
                 'context' => $finding->context ?? [],
-                'edit_url' => $finding->page ? PageEditLink::for($finding->page) : null,
+                'edit_url' => ($withEditLinks && $finding->page) ? PageEditLink::for($finding->page) : null,
             ])
             ->all();
 

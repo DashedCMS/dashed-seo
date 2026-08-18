@@ -376,6 +376,14 @@
                             </td>
                         </tr>
                     @endforeach
+
+                    @if ($check['findings']['remaining'] > 0)
+                        <tr class="finding">
+                            <td colspan="2" class="muted">
+                                {{ __('En nog :aantal adressen die hier niet in passen. Het volledige overzicht staat in het CMS.', ['aantal' => $check['findings']['remaining']]) }}
+                            </td>
+                        </tr>
+                    @endif
                 </tbody>
             </table>
         @endforeach

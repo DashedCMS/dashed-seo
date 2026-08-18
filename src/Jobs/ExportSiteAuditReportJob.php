@@ -19,6 +19,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Dashed\DashedSeo\Filament\Support\ReportData;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Dashed\DashedCore\Jobs\Concerns\CreatesExportRecord;
 
 /**
@@ -38,7 +39,31 @@ class ExportSiteAuditReportJob implements ShouldQueue
     // tweede bestand op, en de exportrij vertelt zelf al wat er misging.
     public int $tries = 1;
 
-    public int $timeout = 1800;
+    /**
+     * Ruim boven wat een uitdraai kost (een scan van driehonderd pagina's doet
+     * er twee seconden over), maar niet zo hoog dat het doet alsof minuten
+     * normaal zijn. Een job die langer duurt dan de retry_after van de wachtrij
+     * (standaard negentig seconden) wordt tijdens het draaien opnieuw
+     * uitgedeeld, en dat is precies waar "has been attempted too many times"
+     * vandaan komt: niet een fout in de uitdraai, maar twee werkers op dezelfde
+     * job.
+     */
+    public int $timeout = 600;
+
+    /**
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        // Mocht de wachtrij deze job toch een tweede keer uitdelen, dan hoort
+        // er geen tweede uitdraai naast de eerste te gaan lopen: dat verdubbelt
+        // het geheugen en levert twee bestanden voor een export.
+        return [
+            (new WithoutOverlapping('site-audit-report-' . $this->auditId))
+                ->dontRelease()
+                ->expireAfter($this->timeout),
+        ];
+    }
 
     public function __construct(public int $auditId, public User $user)
     {
