@@ -6,8 +6,11 @@ namespace Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages;
 
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
+use Filament\Notifications\Notification;
 use Illuminate\Contracts\Support\Htmlable;
 use Dashed\DashedSeo\Filament\Support\ReportData;
+use Dashed\DashedSeo\Jobs\ExportSiteAuditReportJob;
+use Dashed\DashedCore\Filament\Resources\ExportResource;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource;
 use Filament\Resources\Pages\Concerns\InteractsWithRecord;
 
@@ -38,6 +41,27 @@ class ViewSiteAuditReport extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('exportPdf')
+                ->label(__('Exporteren als PDF'))
+                ->icon('heroicon-o-arrow-down-tray')
+                ->action(function (): void {
+                    ExportSiteAuditReportJob::dispatch($this->getRecord()->id, auth()->user());
+
+                    Notification::make()
+                        ->title(__('Het rapport wordt uitgedraaid'))
+                        ->body(__('Je krijgt een melding zodra de PDF klaar staat.'))
+                        ->success()
+                        // Het exportoverzicht hangt aan een eigen recht, dus
+                        // niet iedereen die een rapport mag uitdraaien mag daar
+                        // ook komen. De melding zelf komt er hoe dan ook.
+                        ->actions(ExportResource::canAccess() ? [
+                            Action::make('exports')
+                                ->label(__('Naar het exportoverzicht'))
+                                ->url(ExportResource::getUrl('index')),
+                        ] : [])
+                        ->send();
+                }),
+
             Action::make('pages')
                 ->label(__('Per pagina bekijken'))
                 ->icon('heroicon-o-table-cells')

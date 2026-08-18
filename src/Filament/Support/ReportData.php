@@ -114,11 +114,46 @@ final class ReportData
     }
 
     /**
-     * De getroffen adressen van een enkele controle, met de uitleg erbij.
+     * Het hele rapport in een enkele array: het voorblad, de secties waarin
+     * iets gevonden is, en bij elke controle alle getroffen adressen. Dit
+     * voedt de PDF, die bewust niets afkapt: het scherm doet dat wel, dus
+     * zonder deze uitdraai is er geen plek meer waar het volledige beeld
+     * staat.
      *
      * @return array<string, mixed>
      */
-    public static function findings(SiteAudit $audit, string $checkKey, int $limit = 100): array
+    public static function full(SiteAudit $audit): array
+    {
+        $sections = [];
+
+        foreach (self::sections($audit) as $section) {
+            if ($section['checks'] === []) {
+                continue;
+            }
+
+            $section['checks'] = array_map(
+                fn (array $check): array => $check + [
+                    'findings' => self::findings($audit, $check['check_key'], null),
+                ],
+                $section['checks'],
+            );
+
+            $sections[] = $section;
+        }
+
+        return [
+            'cover' => self::cover($audit),
+            'sections' => $sections,
+        ];
+    }
+
+    /**
+     * De getroffen adressen van een enkele controle, met de uitleg erbij. Een
+     * limiet van null haalt alles op.
+     *
+     * @return array<string, mixed>
+     */
+    public static function findings(SiteAudit $audit, string $checkKey, ?int $limit = 100): array
     {
         $check = app(SeoCheckRegistry::class)->check($checkKey);
 
@@ -130,7 +165,7 @@ final class ReportData
             ->with('page')
             ->orderByDesc('is_new')
             ->orderBy('id')
-            ->limit($limit)
+            ->when($limit !== null, fn ($query) => $query->limit($limit))
             ->get()
             ->map(fn ($finding): array => [
                 'url' => $finding->url ?: $finding->page?->url,
