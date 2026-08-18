@@ -7,8 +7,8 @@ namespace Dashed\DashedSeo\Commands;
 use Illuminate\Console\Command;
 use Dashed\DashedCore\Classes\Sites;
 use Dashed\DashedSeo\Audits\AuditGuard;
-use Dashed\DashedSeo\Audits\AuditSchedule;
 use Dashed\DashedSeo\Audits\AuditSweeper;
+use Dashed\DashedSeo\Audits\AuditSchedule;
 use Dashed\DashedSeo\Jobs\StartSiteAuditJob;
 
 class RunSiteAudits extends Command

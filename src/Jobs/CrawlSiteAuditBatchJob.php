@@ -76,9 +76,22 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
             return;
         }
 
+        // Een batch mag nooit langer duren dan de retry_after van de wachtrij
+        // (standaard negentig seconden). Gebeurt dat wel, dan deelt de wachtrij
+        // dezelfde job nog een keer uit terwijl hij loopt, en met tries op 1
+        // eindigt de scan als "has been attempted too many times" terwijl er
+        // niets mis was. Tien trage pagina's met een fetch-timeout van vijftien
+        // seconden halen die grens moeiteloos, dus stoppen we eerder en pakt de
+        // volgende batch de rest op.
+        $startedAt = microtime(true);
+
         foreach ($batch as $page) {
             $this->crawl($audit, $page);
             usleep(config('dashed-seo.crawler.delay_ms') * 1000);
+
+            if ((microtime(true) - $startedAt) >= (float) config('dashed-seo.crawler.max_batch_seconds')) {
+                break;
+            }
         }
 
         $audit->update([

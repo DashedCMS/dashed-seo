@@ -10,6 +10,12 @@ return [
         'delay_ms' => 200,
         'timeout' => 15,
         'batch_size' => 10,
+        // Hoe lang een batch hoogstens pagina's ophaalt voordat hij de rest aan
+        // de volgende batch laat. Ruim onder de negentig seconden die een
+        // wachtrij standaard aanhoudt voordat hij een lopende job opnieuw
+        // uitdeelt; anders eindigt een trage site als "has been attempted too
+        // many times" terwijl de scan gewoon zijn werk deed.
+        'max_batch_seconds' => 60,
         'max_external_links' => 200,
         // Bovengrens op het aantal bronbestanden (css/js/afbeeldingen) dat een
         // enkele audit ophaalt, over alle batches heen. Zonder plafond is een
