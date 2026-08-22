@@ -10,14 +10,20 @@ use Filament\Pages\Page;
 use Filament\Schemas\Schema;
 use Dashed\DashedCore\Classes\Sites;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Tabs;
+use Dashed\DashedSeo\SeoCheckRegistry;
+use Dashed\DashedSeo\SeoFixerRegistry;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Tabs\Tab;
+use Dashed\DashedSeo\Settings\FixSettings;
 use Filament\Forms\Components\Placeholder;
 use Dashed\DashedCore\Models\Customsetting;
 use Dashed\DashedSeo\Settings\AuditSettings;
+use Dashed\DashedSeo\Filament\Support\ReportData;
 use Dashed\DashedCore\Traits\HasSettingsPermission;
 use Dashed\DashedSeo\Filament\Actions\ScanNowAction;
 
@@ -66,6 +72,13 @@ class DashedSeoSettingsPage extends Page
 
             foreach (AuditSettings::THRESHOLD_KEYS as $key) {
                 $formData["site_audit_threshold_{$key}_{$site['id']}"] = $settings->thresholds[$key];
+            }
+
+            $formData["site_audit_fixes_enabled_{$site['id']}"] = FixSettings::enabled($site['id']);
+            $formData["site_audit_fix_ai_limit_{$site['id']}"] = FixSettings::aiLimit($site['id']);
+
+            foreach (app(SeoFixerRegistry::class)->checkKeys() as $checkKey) {
+                $formData["site_audit_fix_mode_{$checkKey}_{$site['id']}"] = FixSettings::modeFor($checkKey, $site['id']);
             }
         }
 
@@ -144,11 +157,71 @@ class DashedSeoSettingsPage extends Page
                         ])
                         ->columns(3)
                         ->columnSpanFull(),
+                    Section::make(__('Automatisch oplossen'))
+                        ->description(__('Wat de scan zelf mag rechtzetten en wat er eerst langs jou komt. Staat standaard uit.'))
+                        ->collapsed()
+                        ->schema(array_merge([
+                            Toggle::make("site_audit_fixes_enabled_{$id}")
+                                ->label(__('Automatisch oplossen aanzetten'))
+                                ->helperText(__('Zolang dit uit staat verandert een scan niets aan de site. Let op: fixen die vanzelf draaien doen dat zonder gebruiker, en slaan dus de bewerkrechten per pagina over.')),
+                            TextInput::make("site_audit_fix_ai_limit_{$id}")
+                                ->label(__('Maximaal aantal AI-voorstellen per scan'))
+                                ->helperText(__('Voorkomt dat de eerste scan van een grote site in een keer honderden AI-aanroepen kost. Wat erboven valt blijft gewoon als bevinding staan.'))
+                                ->numeric()
+                                ->minValue(0)
+                                ->default(FixSettings::DEFAULT_AI_LIMIT),
+                        ], $this->fixModeFields($id)))
+                        ->columns(1)
+                        ->columnSpanFull(),
                 ])
                 ->columns(2);
         }
 
         return $schema->schema([Tabs::make('Sites')->tabs($tabs)])->statePath('data');
+    }
+
+    /**
+     * Een keuzelijst per controle die een fixer heeft, in de volgorde van het
+     * rapport. Controles zonder fixer komen hier niet voor: daar valt niets te
+     * kiezen.
+     *
+     * @return array<int, \Filament\Schemas\Components\Component>
+     */
+    protected function fixModeFields(string $siteId): array
+    {
+        $checks = app(SeoCheckRegistry::class);
+        $fixers = app(SeoFixerRegistry::class);
+
+        $perSectie = [];
+
+        foreach ($fixers->checkKeys() as $checkKey) {
+            $check = $checks->check($checkKey);
+            $perSectie[$check?->section() ?? 'overig'][$checkKey] = $check?->label() ?? $checkKey;
+        }
+
+        $velden = [];
+
+        foreach (ReportData::SECTIONS as $sectie => $label) {
+            if (! isset($perSectie[$sectie])) {
+                continue;
+            }
+
+            $velden[] = Fieldset::make(__($label))
+                ->schema(array_map(
+                    fn (string $checkKey): Select => Select::make("site_audit_fix_mode_{$checkKey}_{$siteId}")
+                        ->label($perSectie[$sectie][$checkKey])
+                        ->options([
+                            FixSettings::MODE_OFF => __('Uit'),
+                            FixSettings::MODE_SUGGESTION => __('Voorstel'),
+                            FixSettings::MODE_AUTO => __('Automatisch'),
+                        ])
+                        ->default(FixSettings::modeFor($checkKey, $siteId)),
+                    array_keys($perSectie[$sectie]),
+                ))
+                ->columns(2);
+        }
+
+        return $velden;
     }
 
     public function submit(): void
@@ -178,6 +251,17 @@ class DashedSeoSettingsPage extends Page
                     $formState["site_audit_threshold_{$key}_{$id}"] ?? null,
                     $id
                 );
+            }
+
+            Customsetting::set('site_audit_fixes_enabled', $formState["site_audit_fixes_enabled_{$id}"] ?? false, $id);
+            Customsetting::set('site_audit_fix_ai_limit', $formState["site_audit_fix_ai_limit_{$id}"] ?? FixSettings::DEFAULT_AI_LIMIT, $id);
+
+            foreach (app(SeoFixerRegistry::class)->checkKeys() as $checkKey) {
+                $waarde = $formState["site_audit_fix_mode_{$checkKey}_{$id}"] ?? null;
+
+                if (in_array($waarde, FixSettings::modes(), true)) {
+                    Customsetting::set("site_audit_fix_mode_{$checkKey}", $waarde, $id);
+                }
             }
         }
 

@@ -7,6 +7,7 @@ namespace Dashed\DashedSeo;
 use Filament\Panel;
 use Filament\Contracts\Plugin;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource;
+use Dashed\DashedSeo\Filament\Resources\SiteAuditFixResource;
 use Dashed\DashedSeo\Filament\Pages\Settings\DashedSeoSettingsPage;
 
 class DashedSeoPlugin implements Plugin
@@ -21,6 +22,7 @@ class DashedSeoPlugin implements Plugin
         $panel
             ->resources([
                 SiteAuditResource::class,
+                SiteAuditFixResource::class,
             ])
             // Zonder deze regel bestaat de route van de instellingenpagina
             // niet, ook al staat hij wel in het instellingenoverzicht.

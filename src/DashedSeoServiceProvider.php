@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo;
 
+use Illuminate\Support\Facades\Event;
 use Spatie\LaravelPackageTools\Package;
+use Dashed\DashedSeo\Events\SiteAuditCompleted;
+use Dashed\DashedSeo\Listeners\ProposeFixesAfterAudit;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Dashed\DashedSeo\Filament\Pages\Settings\DashedSeoSettingsPage;
 
@@ -25,6 +28,8 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_13_000007_add_icons_to_site_audit_pages_table',
                 '2026_08_14_000008_add_pages_blocked_to_site_audits_table',
                 '2026_08_17_000009_add_from_cms_to_site_audit_pages_table',
+                '2026_08_22_000010_create_site_audit_fixes_table',
+                '2026_08_23_000011_add_finding_id_to_site_audit_fixes_table',
             ])
             ->runsMigrations()
             ->hasViews()
@@ -38,6 +43,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
     public function packageRegistered(): void
     {
         $this->app->singleton(SeoCheckRegistry::class);
+        $this->app->singleton(SeoFixerRegistry::class);
     }
 
     public function packageBooted(): void
@@ -154,5 +160,28 @@ class DashedSeoServiceProvider extends PackageServiceProvider
         ] as $class) {
             $registry->register(new $class());
         }
+
+        $fixers = $this->app->make(SeoFixerRegistry::class);
+
+        foreach ([
+            \Dashed\DashedSeo\Fixes\Sitemap\RebuildSitemapFixer::class,
+            \Dashed\DashedSeo\Fixes\Sitemap\SitemapInRobotsFixer::class,
+            \Dashed\DashedSeo\Fixes\Redirects\PermanentRedirectFixer::class,
+            \Dashed\DashedSeo\Fixes\Redirects\FlattenRedirectChainFixer::class,
+            \Dashed\DashedSeo\Fixes\Redirects\RemoveRedirectLoopFixer::class,
+            \Dashed\DashedSeo\Fixes\Links\RelinkToFinalUrlFixer::class,
+            \Dashed\DashedSeo\Fixes\Links\RelinkBrokenInternalFixer::class,
+            \Dashed\DashedSeo\Fixes\Links\RemoveInternalNofollowFixer::class,
+            \Dashed\DashedSeo\Fixes\Links\UnlinkBrokenExternalFixer::class,
+            \Dashed\DashedSeo\Fixes\Crawling\MissingPageRedirectFixer::class,
+            \Dashed\DashedSeo\Fixes\Meta\MetaTitleFixer::class,
+            \Dashed\DashedSeo\Fixes\Meta\MetaDescriptionFixer::class,
+            \Dashed\DashedSeo\Fixes\Content\AltTextFixer::class,
+            \Dashed\DashedSeo\Fixes\Links\AnchorTextFixer::class,
+        ] as $fixer) {
+            $fixers->register(new $fixer());
+        }
+
+        Event::listen(SiteAuditCompleted::class, ProposeFixesAfterAudit::class);
     }
 }

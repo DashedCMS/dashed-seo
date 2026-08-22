@@ -7,6 +7,7 @@ namespace Dashed\DashedSeo\Filament\Support;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Dashed\DashedSeo\SeoCheckRegistry;
 use Dashed\DashedSeo\Audits\PageEditLink;
+use Dashed\DashedSeo\Models\SiteAuditFix;
 
 /**
  * Het rapport uit de database halen, los van de weergave. De Blade-bestanden
@@ -83,8 +84,15 @@ final class ReportData
         ];
     }
 
-    /** @return array<int, array<string, mixed>> */
-    public static function sections(SiteAudit $audit): array
+    /**
+     * $withFixes staat uit voor de PDF: de PDF-opmaak leest de sleutels `fix`,
+     * `check_key` en `pending_fixes` nergens, dus zonder deze schakelaar
+     * betaalt een export met N controles tot twee extra queries per controle
+     * voor een resultaat dat meteen weggegooid wordt.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function sections(SiteAudit $audit, bool $withFixes = true): array
     {
         $registry = app(SeoCheckRegistry::class);
         $results = $audit->checkResults()->get()->groupBy('section');
@@ -107,6 +115,10 @@ final class ReportData
                     'count' => (int) $result->count,
                     'new_count' => (int) $result->new_count,
                     'resolved_count' => (int) $result->resolved_count,
+                    'pending_fixes' => $withFixes ? (int) SiteAuditFix::where('audit_id', $audit->id)
+                        ->where('check_key', $result->check_key)
+                        ->where('status', SiteAuditFix::STATUS_PENDING)
+                        ->count() : 0,
                 ])
                 ->values()
                 ->all();
@@ -135,14 +147,17 @@ final class ReportData
     {
         $sections = [];
 
-        foreach (self::sections($audit) as $section) {
+        foreach (self::sections($audit, false) as $section) {
             if ($section['checks'] === []) {
                 continue;
             }
 
             $section['checks'] = array_map(
+                // false, false: geen bewerklinks en geen fixstatus. De PDF
+                // leest geen van beide, en op honderden bevindingen per
+                // controle is dat anders pure overhead voor niets.
                 fn (array $check): array => $check + [
-                    'findings' => self::findings($audit, $check['check_key'], self::PDF_FINDINGS_PER_CHECK, false),
+                    'findings' => self::findings($audit, $check['check_key'], self::PDF_FINDINGS_PER_CHECK, false, false),
                 ],
                 $section['checks'],
             );
@@ -165,15 +180,48 @@ final class ReportData
      * en in een PDF is er niets om op te klikken. Op een scan van driehonderd
      * pagina's waren dat ruim vierduizend queries voor niets.
      *
+     * $withFixes staat om dezelfde reden uit voor de PDF: de PDF-opmaak
+     * gebruikt de sleutels `fix` en `pending_fixes` niet, en de opzoekquery
+     * kost anders alsnog een query per controle voor niets. De sleutels
+     * blijven wel altijd in de array staan, met `null` en `0`, zodat de vorm
+     * van het antwoord niet verandert met wie er belt.
+     *
      * @return array<string, mixed>
      */
-    public static function findings(SiteAudit $audit, string $checkKey, ?int $limit = 100, bool $withEditLinks = true): array
+    public static function findings(SiteAudit $audit, string $checkKey, ?int $limit = 100, bool $withEditLinks = true, bool $withFixes = true): array
     {
         $check = app(SeoCheckRegistry::class)->check($checkKey);
 
         $query = $audit->findings()->where('check_key', $checkKey);
 
         $total = (clone $query)->count();
+
+        // Alleen deze vier kolommen: before en after zijn json met de volledige
+        // oude en nieuwe inhoud van een pagina, en dit scherm toont er niets
+        // van. Ze meehalen is op een scan met honderden voorstellen megabytes
+        // aan gegevens voor niets.
+        $fixes = $withFixes
+            ? SiteAuditFix::where('audit_id', $audit->id)
+                ->where('check_key', $checkKey)
+                ->select(['id', 'finding_id', 'page_id', 'status'])
+                ->get()
+            : collect();
+
+        // Op bevinding en niet op pagina: een pagina met drie kapotte links
+        // levert drie bevindingen en drie voorstellen met hetzelfde page_id.
+        // Koppelen op pagina hield daar de laatste van over, en dan verstuurt
+        // de knop bij regel A het voorstel van regel C terwijl A en B
+        // "Doorgevoerd" melden voor werk dat daar nooit gedaan is.
+        $perBevinding = $fixes
+            ->filter(fn (SiteAuditFix $fix): bool => $fix->finding_id !== null)
+            ->keyBy(fn (SiteAuditFix $fix): int => (int) $fix->finding_id);
+
+        // Een sitebrede fixer legt geen bevinding vast, want zijn ene voorstel
+        // dekt ze allemaal. Rijen uit een oudere scan, van voordat finding_id
+        // bestond, vallen hier ook op hun oude gedrag terug.
+        $zonderBevinding = $fixes
+            ->filter(fn (SiteAuditFix $fix): bool => $fix->finding_id === null)
+            ->keyBy(fn (SiteAuditFix $fix): string => (string) ($fix->page_id ?? 'site'));
 
         $rows = $query
             ->with('page')
@@ -186,6 +234,11 @@ final class ReportData
                 'is_new' => (bool) $finding->is_new,
                 'context' => $finding->context ?? [],
                 'edit_url' => ($withEditLinks && $finding->page) ? PageEditLink::for($finding->page) : null,
+                'fix' => ($fix = $perBevinding[(int) $finding->id]
+                    ?? $zonderBevinding[(string) ($finding->page_id ?? 'site')]
+                    ?? null)
+                    ? ['id' => (int) $fix->id, 'status' => $fix->status]
+                    : null,
             ])
             ->all();
 
@@ -197,6 +250,8 @@ final class ReportData
             // Zonder dit getal leest een afgekapte lijst als de volledige
             // lijst, en dan lijkt het probleem kleiner dan het is.
             'remaining' => max(0, $total - count($rows)),
+            'check_key' => $checkKey,
+            'pending_fixes' => $fixes->where('status', SiteAuditFix::STATUS_PENDING)->count(),
         ];
     }
 

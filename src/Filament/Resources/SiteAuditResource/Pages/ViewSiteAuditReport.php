@@ -7,7 +7,9 @@ namespace Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Filament\Notifications\Notification;
+use Dashed\DashedSeo\Models\SiteAuditFix;
 use Illuminate\Contracts\Support\Htmlable;
+use Dashed\DashedSeo\Jobs\ApplySiteAuditFixJob;
 use Dashed\DashedSeo\Filament\Support\ReportData;
 use Dashed\DashedSeo\Jobs\ExportSiteAuditReportJob;
 use Dashed\DashedCore\Filament\Resources\ExportResource;
@@ -95,5 +97,46 @@ class ViewSiteAuditReport extends Page
     public function openFindings(): ?array
     {
         return $this->openCheck ? ReportData::findings($this->getRecord(), $this->openCheck) : null;
+    }
+
+    /** Een enkel voorstel doorzetten vanaf de rapportpagina. */
+    public function applyFix(int $fixId): void
+    {
+        $fix = SiteAuditFix::where('audit_id', $this->getRecord()->id)
+            ->where('status', SiteAuditFix::STATUS_PENDING)
+            ->find($fixId);
+
+        if (! $fix) {
+            return;
+        }
+
+        ApplySiteAuditFixJob::dispatch($fix->id, auth()->id());
+
+        Notification::make()
+            ->title(__('Het voorstel wordt doorgevoerd'))
+            ->success()
+            ->send();
+    }
+
+    /**
+     * Alles wat voor deze controle klaarstaat doorzetten. Bewust begrensd op
+     * de scan die je bekijkt: anders zet een klik hier ook voorstellen van een
+     * heel andere scan door.
+     */
+    public function applyAllForCheck(string $checkKey): void
+    {
+        $fixes = SiteAuditFix::where('audit_id', $this->getRecord()->id)
+            ->where('check_key', $checkKey)
+            ->where('status', SiteAuditFix::STATUS_PENDING)
+            ->get();
+
+        foreach ($fixes as $fix) {
+            ApplySiteAuditFixJob::dispatch($fix->id, auth()->id());
+        }
+
+        Notification::make()
+            ->title(__(':aantal voorstellen worden doorgevoerd', ['aantal' => $fixes->count()]))
+            ->success()
+            ->send();
     }
 }

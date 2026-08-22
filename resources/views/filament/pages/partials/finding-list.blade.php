@@ -10,6 +10,17 @@
         </div>
     </div>
 
+    @if (($findings['pending_fixes'] ?? 0) > 0)
+        <div class="mt-4">
+            <button type="button"
+                    wire:click="applyAllForCheck('{{ $findings['check_key'] }}')"
+                    wire:loading.attr="disabled"
+                    class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500">
+                {{ __('Los alle :aantal op', ['aantal' => $findings['pending_fixes']]) }}
+            </button>
+        </div>
+    @endif
+
     <ul class="mt-4 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white dark:divide-gray-700 dark:border-gray-700 dark:bg-gray-900">
         @foreach ($findings['rows'] as $row)
             <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-2 text-sm">
@@ -26,6 +37,20 @@
                             <span class="text-xs text-gray-500 dark:text-gray-400">{{ $key }}: {{ \Illuminate\Support\Str::limit((string) $value, 60) }}</span>
                         @endif
                     @endforeach
+                    @if ($row['fix'])
+                        @if ($row['fix']['status'] === \Dashed\DashedSeo\Models\SiteAuditFix::STATUS_PENDING)
+                            <button type="button"
+                                    wire:click="applyFix({{ $row['fix']['id'] }})"
+                                    wire:loading.attr="disabled"
+                                    class="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400">
+                                {{ __('Oplossen') }}
+                            </button>
+                        @else
+                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ \Dashed\DashedSeo\Filament\Resources\SiteAuditFixResource::statusLabels()[$row['fix']['status']] ?? $row['fix']['status'] }}
+                            </span>
+                        @endif
+                    @endif
                     @if ($row['edit_url'])
                         <a href="{{ $row['edit_url'] }}" class="text-xs font-medium text-primary-600 hover:underline dark:text-primary-400">{{ __('Bewerken') }}</a>
                     @endif
@@ -37,6 +62,12 @@
     @if ($findings['remaining'] > 0)
         <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
             {{ __('Nog :aantal adressen niet getoond. Gebruik het scherm per pagina om alles te doorlopen.', ['aantal' => $findings['remaining']]) }}
+        </p>
+    @endif
+
+    @if ($findings['check_key'] === 'favicon_missing')
+        <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            {{ __('Een favicon kies je zelf. Stel hem in bij Instellingen, Algemeen, onder Branding.') }}
         </p>
     @endif
 </div>
