@@ -11,6 +11,7 @@ use Illuminate\Queue\SerializesModels;
 use Dashed\DashedSeo\Crawler\RobotsTxt;
 use Illuminate\Queue\InteractsWithQueue;
 use Dashed\DashedSeo\Models\SiteAuditPage;
+use Dashed\DashedSeo\Crawler\PathLocale;
 use Dashed\DashedSeo\Crawler\ModelResolver;
 use Dashed\DashedSeo\Crawler\SitemapReader;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
@@ -43,6 +44,7 @@ class StartSiteAuditJob implements ShouldQueue
         // bij elke scan gebeuren, niet alleen wanneer de site wisselt, en
         // voordat er iets anders met de resolver gebeurt.
         ModelResolver::flush();
+        PathLocale::flush();
 
         // De instellingen van deze site bepalen vanaf hier alles: de limieten
         // die de crawler leest, en de drempels waarmee de controles oordelen.
@@ -253,6 +255,10 @@ class StartSiteAuditJob implements ShouldQueue
             'url_hash' => UrlNormalizer::hash($url),
             'path' => $path,
             'crawl_status' => $robots->allows($path) ? SiteAuditPage::CRAWL_PENDING : SiteAuditPage::CRAWL_DONE,
+            // De taal komt uit het pad en wordt hier al vastgelegd, niet pas
+            // bij het analyseren: de fixlaag leest hem van de pagina en zonder
+            // deze kolom schrijft elke fixer in de taal van de worker.
+            'locale' => PathLocale::forPath($path, $audit->site_id),
             'depth' => 0,
             'in_sitemap' => $inSitemap,
             // Elke rij krijgt deze sleutel, ook als hij false is: een bulk-insert

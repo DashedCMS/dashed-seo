@@ -14,6 +14,7 @@ use Dashed\DashedSeo\Crawler\ParsedPage;
 use Illuminate\Queue\InteractsWithQueue;
 use Dashed\DashedSeo\Models\SiteAuditLink;
 use Dashed\DashedSeo\Models\SiteAuditPage;
+use Dashed\DashedSeo\Crawler\PathLocale;
 use Dashed\DashedSeo\Crawler\ModelResolver;
 use Dashed\DashedSeo\Crawler\UrlNormalizer;
 use Dashed\DashedSeo\Models\SiteAuditAsset;
@@ -55,6 +56,7 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
         // zelf; een verse warmup per batch is de prijs voor nooit een
         // "bewerk deze pagina"-link die naar een verouderde slug wijst.
         ModelResolver::flush();
+        PathLocale::flush();
 
         $this->reclaimStrandedPages($audit);
 
@@ -285,6 +287,9 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                 [
                     'url' => $link['url'],
                     'path' => $path,
+                    // Zie StartSiteAuditJob::row(): de taal komt uit het pad en
+                    // hoort al vast te staan voordat de fixlaag hem leest.
+                    'locale' => PathLocale::forPath($path, $audit->site_id),
                     'crawl_status' => $blocked ? SiteAuditPage::CRAWL_DONE : SiteAuditPage::CRAWL_PENDING,
                     'depth' => $page->depth + 1,
                     'discovered_from_page_id' => $page->id,
