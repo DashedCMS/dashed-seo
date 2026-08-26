@@ -67,10 +67,6 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             $schedule->command('dashed:run-site-audits')
                 ->dailyAt('03:00')
                 ->withoutOverlapping();
-
-            $schedule->command('dashed:prune-site-audits')
-                ->weeklyOn(1, '04:30')
-                ->withoutOverlapping();
         });
 
         cms()->builder('plugins', array_merge(cms()->builder('plugins') ?: [], [
