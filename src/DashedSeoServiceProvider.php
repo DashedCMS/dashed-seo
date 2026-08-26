@@ -207,10 +207,13 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 ->pakket('dashed-seo', __('SEO en site'))
                 ->opruimer(new SiteAuditOpruimer())
                 ->termijn(
-                    Termijn::make('site_audits', fn () => (int) config('dashed-seo.retention.keep_full_audits', 3), 'created_at')
+                    // De terugval hier is gelijk aan wat dashed-seo.php echt zegt
+                    // (die sleutel bestaat altijd), niet een los verzonnen getal:
+                    // anders belooft de code een terugval die nooit gebruikt wordt.
+                    Termijn::make('site_audits', fn () => (int) config('dashed-seo.retention.keep_full_audits', 10), 'created_at')
                         ->eenheid('scans')
                         ->label(__('Volledige sitescans bewaren (aantal)'))
-                        ->uitleg(__('Zoveel scans blijven volledig. Oudere scans houden hun samenvatting maar verliezen de losse pagina- en linkregels, en dat is waar de omvang zit.'))
+                        ->uitleg(__('Zoveel scans blijven volledig. Oudere scans houden hun samenvatting maar verliezen de losse pagina- en linkregels, en dat is waar de omvang zit. Standaard: 10 scans.'))
                 )
         );
     }
