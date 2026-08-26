@@ -6,7 +6,10 @@ namespace Dashed\DashedSeo;
 
 use Illuminate\Support\Facades\Event;
 use Spatie\LaravelPackageTools\Package;
+use Dashed\DashedCore\Retention\Termijn;
+use Dashed\DashedCore\Retention\Retention;
 use Dashed\DashedSeo\Events\SiteAuditCompleted;
+use Dashed\DashedSeo\Retention\SiteAuditOpruimer;
 use Dashed\DashedSeo\Listeners\ProposeFixesAfterAudit;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Dashed\DashedSeo\Filament\Pages\Settings\DashedSeoSettingsPage;
@@ -183,5 +186,32 @@ class DashedSeoServiceProvider extends PackageServiceProvider
         }
 
         Event::listen(SiteAuditCompleted::class, ProposeFixesAfterAudit::class);
+
+        self::registreerBewaartermijnen();
+    }
+
+    /**
+     * De sitescans aanmelden bij het bewaartermijnenregister.
+     *
+     * Statisch en apart van packageBooted(), zodat een test hem opnieuw kan
+     * aanroepen na app(RetentionRegistry::class)->flush(). Deze __()-aanroepen
+     * mogen niet in registeringPackage() of packageRegistered() staan: die
+     * fase draait voordat de vertaalservice klaarstaat en zou de hele boot
+     * laten klappen.
+     */
+    public static function registreerBewaartermijnen(): void
+    {
+        cms()->registerRetention(
+            Retention::make('site_audits')
+                ->label(__('Sitescans'))
+                ->pakket('dashed-seo', __('SEO en site'))
+                ->opruimer(new SiteAuditOpruimer())
+                ->termijn(
+                    Termijn::make('site_audits', fn () => (int) config('dashed-seo.retention.keep_full_audits', 3), 'created_at')
+                        ->eenheid('scans')
+                        ->label(__('Volledige sitescans bewaren (aantal)'))
+                        ->uitleg(__('Zoveel scans blijven volledig. Oudere scans houden hun samenvatting maar verliezen de losse pagina- en linkregels, en dat is waar de omvang zit.'))
+                )
+        );
     }
 }

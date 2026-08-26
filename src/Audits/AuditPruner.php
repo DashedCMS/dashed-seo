@@ -22,30 +22,10 @@ final class AuditPruner
      */
     public static function prune(): int
     {
-        $keep = (int) config('dashed-seo.retention.keep_full_audits');
         $pruned = 0;
 
         foreach (Sites::getSites() as $site) {
-            $keepIds = SiteAudit::query()
-                ->where('site_id', $site['id'])
-                ->where('status', SiteAudit::STATUS_COMPLETED)
-                ->orderByDesc('finished_at')
-                ->orderByDesc('id')
-                ->limit($keep)
-                ->pluck('id');
-
-            SiteAudit::query()
-                ->where('site_id', $site['id'])
-                ->whereNotIn('id', $keepIds)
-                // Een lopende scan staat nooit in de bewaarlijst hierboven
-                // (die filtert op STATUS_COMPLETED) maar heeft tijdens het
-                // crawlen wel al pagina's. Zonder dit filter trekt het
-                // wekelijkse uitkleden de werkvoorraad onder een scan vandaan
-                // die nog bezig is.
-                ->whereNotIn('status', SiteAudit::runningStatuses())
-                // Een scan die al is uitgekleed heeft geen pagina's meer, dus
-                // die hoeft niet elke week opnieuw langs.
-                ->whereHas('pages')
+            self::uitTeKleden($site['id'])
                 ->orderBy('id')
                 ->chunkById(50, function ($audits) use (&$pruned): void {
                     foreach ($audits as $audit) {
@@ -60,5 +40,45 @@ final class AuditPruner
         }
 
         return $pruned;
+    }
+
+    /**
+     * De scans die buiten de bewaartermijn vallen en nog uitgekleed moeten
+     * worden. Gedeeld door prune() en telUitTeKleden(), zodat een droge run
+     * niet uit de pas kan lopen met wat er daadwerkelijk gebeurt.
+     */
+    private static function uitTeKleden(string $siteId): \Illuminate\Database\Eloquent\Builder
+    {
+        $keep = (int) config('dashed-seo.retention.keep_full_audits');
+
+        $keepIds = SiteAudit::query()
+            ->where('site_id', $siteId)
+            ->where('status', SiteAudit::STATUS_COMPLETED)
+            ->orderByDesc('finished_at')
+            ->orderByDesc('id')
+            ->limit($keep)
+            ->pluck('id');
+
+        return SiteAudit::query()
+            ->where('site_id', $siteId)
+            ->whereNotIn('id', $keepIds)
+            // Een lopende scan staat nooit in de bewaarlijst hierboven (die
+            // filtert op STATUS_COMPLETED) maar heeft tijdens het crawlen wel
+            // al pagina's. Zonder dit filter trekt het uitkleden de
+            // werkvoorraad onder een scan vandaan die nog bezig is.
+            ->whereNotIn('status', SiteAudit::runningStatuses())
+            // Een scan die al is uitgekleed heeft geen pagina's meer.
+            ->whereHas('pages');
+    }
+
+    public static function telUitTeKleden(): int
+    {
+        $aantal = 0;
+
+        foreach (Sites::getSites() as $site) {
+            $aantal += self::uitTeKleden($site['id'])->count();
+        }
+
+        return $aantal;
     }
 }
