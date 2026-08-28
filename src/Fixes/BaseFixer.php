@@ -7,8 +7,8 @@ namespace Dashed\DashedSeo\Fixes;
 use Dashed\DashedSeo\Models\SiteAudit;
 use Illuminate\Database\Eloquent\Model;
 use Dashed\DashedSeo\Contracts\SeoFixer;
-use Dashed\DashedSeo\Models\SiteAuditFix;
 use Dashed\DashedSeo\Crawler\PathLocale;
+use Dashed\DashedSeo\Models\SiteAuditFix;
 use Dashed\DashedSeo\Models\SiteAuditFinding;
 
 /**

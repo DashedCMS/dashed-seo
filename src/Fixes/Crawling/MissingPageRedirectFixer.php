@@ -9,9 +9,9 @@ use Dashed\DashedCore\Models\Redirect;
 use Dashed\DashedSeo\Fixes\FixProposal;
 use Dashed\DashedSeo\Models\SiteAuditFix;
 use Dashed\DashedSeo\Models\SiteAuditFinding;
+use Dashed\DashedSeo\Exceptions\FixStaleException;
 use Dashed\DashedSeo\Fixes\Links\MovedUrlResolver;
 use Dashed\DashedSeo\Fixes\Redirects\FindsRedirect;
-use Dashed\DashedSeo\Exceptions\FixStaleException;
 
 /**
  * Een adres dat een 4XX geeft maar waar wel naartoe gelinkt wordt, opvangen
