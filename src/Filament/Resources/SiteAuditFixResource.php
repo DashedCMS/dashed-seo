@@ -23,6 +23,8 @@ use Dashed\DashedSeo\Filament\Resources\SiteAuditFixResource\Pages\ListSiteAudit
 
 class SiteAuditFixResource extends Resource
 {
+    use \Dashed\DashedCore\Filament\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = SiteAuditFix::class;
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-wrench-screwdriver';

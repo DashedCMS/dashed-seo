@@ -19,6 +19,8 @@ use Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages\ViewSiteAuditRep
 
 class SiteAuditResource extends Resource
 {
+    use \Dashed\DashedCore\Filament\Concerns\TranslatesResourceLabels;
+
     protected static ?string $model = SiteAudit::class;
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-magnifying-glass-circle';
