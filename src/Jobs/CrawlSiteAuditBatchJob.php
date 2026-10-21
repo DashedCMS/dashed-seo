@@ -215,6 +215,8 @@ class CrawlSiteAuditBatchJob implements ShouldQueue
                 'stylesheets' => $parsed->stylesheets,
                 'scripts' => $parsed->scripts,
                 'icons' => $parsed->icons,
+                'structured_data' => $parsed->structuredData,
+                'non_crawlable_pagination' => $parsed->nonCrawlablePagination,
                 'indexable' => ! str_contains(strtolower($parsed->robotsMeta ?? ''), 'noindex'),
             ]);
 

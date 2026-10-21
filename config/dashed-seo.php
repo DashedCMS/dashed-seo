@@ -29,6 +29,31 @@ return [
         'bypass_cache_header' => 'X-Dashed-Cache-Bypass',
     ],
 
+    // Welke eigenschappen een schematype minimaal gevuld moet hebben
+    // (SchemaMissingPropertiesCheck), en welk type een CMS-pagina van een
+    // bepaald model hoort mee te sturen (Product-/ArticleSchemaMissingCheck).
+    // Typen staan in kleine letters en als familie: onlinestore telt als
+    // organization, blogposting als article.
+    'structured_data' => [
+        'required' => [
+            'organization' => ['name', 'url'],
+            'website' => ['name', 'url'],
+            'product' => ['name'],
+            'productgroup' => ['name', 'hasVariant'],
+            'article' => ['headline', 'datePublished'],
+            'faqpage' => ['mainEntity'],
+            'breadcrumblist' => ['itemListElement'],
+            'person' => ['name'],
+            'profilepage' => ['mainEntity'],
+            'jobposting' => ['title', 'datePosted', 'hiringOrganization'],
+        ],
+        'expected' => [
+            'Dashed\\DashedEcommerceCore\\Models\\Product' => ['product', 'productgroup'],
+            'Dashed\\DashedEcommerceCore\\Models\\ProductGroup' => ['product', 'productgroup'],
+            'Dashed\\DashedArticles\\Models\\Article' => ['article'],
+        ],
+    ],
+
     'thresholds' => [
         'title_max' => 70,
         'title_min' => 30,

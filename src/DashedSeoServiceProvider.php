@@ -34,6 +34,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_17_000009_add_from_cms_to_site_audit_pages_table',
                 '2026_08_22_000010_create_site_audit_fixes_table',
                 '2026_08_23_000011_add_finding_id_to_site_audit_fixes_table',
+                '2026_10_20_000012_add_structured_data_to_site_audit_pages_table',
             ])
             ->runsMigrations()
             ->hasViews()
@@ -157,6 +158,17 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Links\ExternalLinkWithoutAnchorCheck::class,
             \Dashed\DashedSeo\Checks\Links\BrokenExternalLinkCheck::class,
             \Dashed\DashedSeo\Checks\Links\FaviconMissingCheck::class,
+
+            // Gestructureerde data
+            \Dashed\DashedSeo\Checks\StructuredData\StructuredDataInvalidCheck::class,
+            \Dashed\DashedSeo\Checks\StructuredData\OrganizationSchemaMissingCheck::class,
+            \Dashed\DashedSeo\Checks\StructuredData\ProductSchemaMissingCheck::class,
+            \Dashed\DashedSeo\Checks\StructuredData\ArticleSchemaMissingCheck::class,
+            \Dashed\DashedSeo\Checks\StructuredData\DuplicateSchemaTypeCheck::class,
+            \Dashed\DashedSeo\Checks\StructuredData\SchemaMissingPropertiesCheck::class,
+
+            // Paginering (crawlen)
+            \Dashed\DashedSeo\Checks\Crawling\NonCrawlablePaginationCheck::class,
         ] as $class) {
             $registry->register(new $class());
         }

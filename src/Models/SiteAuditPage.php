@@ -33,6 +33,8 @@ class SiteAuditPage extends Model
         'stylesheets' => 'array',
         'scripts' => 'array',
         'icons' => 'array',
+        'structured_data' => 'array',
+        'non_crawlable_pagination' => 'boolean',
         'crawled_at' => 'datetime',
     ];
 

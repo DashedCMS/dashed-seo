@@ -21,6 +21,10 @@ class ParsedPage
         public array $scripts = [],
         public array $icons = [],
         public array $links = [],
+        /** @var array<int, array{valid: bool, error: ?string, nodes: array}> per JSON-LD-blok, zie StructuredData::summarize() */
+        public array $structuredData = [],
+        /** Een <span wire:click="gotoPage(...)"> in plaats van een anker: de oude themapaginering. */
+        public bool $nonCrawlablePagination = false,
     ) {
     }
 }

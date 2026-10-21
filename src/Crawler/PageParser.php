@@ -112,6 +112,22 @@ class PageParser
             ];
         }
 
+        foreach ($xpath->query('//script[@type="application/ld+json"]') as $node) {
+            $page->structuredData[] = StructuredData::summarize($node->textContent);
+        }
+
+        // De oude themapaginering zette wire:click op een span; een crawler
+        // komt daar niet doorheen. De pakketpartial zet dezelfde wire:click op
+        // een anker met href, en die telt hier niet mee.
+        foreach ($xpath->query('//span[@*[name()="wire:click"]]') as $node) {
+            /** @var DOMElement $node */
+            if (preg_match('/gotoPage|nextPage|previousPage|loadMore/', $node->getAttribute('wire:click'))) {
+                $page->nonCrawlablePagination = true;
+
+                break;
+            }
+        }
+
         return $page;
     }
 

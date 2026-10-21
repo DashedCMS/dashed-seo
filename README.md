@@ -1,7 +1,7 @@
 # dashed-seo
 
-Technische sitescan voor Dashed CMS: crawlt een site, beoordeelt hem op 55
-controles in negen secties, en zet de uitkomst in de beheeromgeving.
+Technische sitescan voor Dashed CMS: crawlt een site, beoordeelt hem op 63
+controles in tien secties, en zet de uitkomst in de beheeromgeving.
 
 ## Draaien
 

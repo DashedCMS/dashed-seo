@@ -414,4 +414,57 @@ return [
         'description' => 'De site heeft geen favicon, waardoor hij in tabbladen en favorieten geen eigen herkenningspunt heeft.',
         'how_to_fix' => 'Zet een favicon in de hoofdmap en verwijs ernaar met een link-element in de head.',
     ],
+
+    // Gestructureerde data
+    'structured_data_invalid' => [
+        'section' => 'structured_data',
+        'severity' => 'error',
+        'label' => 'Ongeldige gestructureerde data',
+        'description' => 'Een JSON-LD-blok op de pagina is geen geldige JSON of heeft geen @type, dus zoekmachines negeren het hele blok.',
+        'how_to_fix' => 'Controleer het blok met de Rich Results Test van Google. Komt het uit een eigen script in het thema of uit toegepaste structured data van de AI-audit, herstel dan de JSON of verwijder het blok.',
+    ],
+    'organization_schema_missing' => [
+        'section' => 'structured_data',
+        'severity' => 'warning',
+        'label' => 'Organisatie- of WebSite-schema ontbreekt',
+        'description' => 'Elke pagina hoort het Organization- en het WebSite-schema van de site mee te sturen; zonder die twee kan een zoekmachine de pagina niet aan de site en het merk koppelen.',
+        'how_to_fix' => 'Het thema rendert de head via de head-component van dashed-core, die beide schema\'s meestuurt. Gebruikt een pagina een eigen layout zonder die component, zet hem er dan in, of zet een leeg gemaakte \'organization\' of \'webSite\' in de schemas niet meer op leeg.',
+    ],
+    'product_schema_missing' => [
+        'section' => 'structured_data',
+        'severity' => 'warning',
+        'label' => 'Productschema ontbreekt op een productpagina',
+        'description' => 'De pagina hoort bij een product of productgroep in het CMS, maar stuurt geen Product- of ProductGroup-schema mee, dus komt hij niet in aanmerking voor productresultaten met prijs en voorraad.',
+        'how_to_fix' => 'Het productschema komt uit ShowProduct in dashed-ecommerce-core via de head-component. Controleer of het thema die component gebruikt en of de productpagina via het Livewire-component ShowProduct rendert.',
+    ],
+    'article_schema_missing' => [
+        'section' => 'structured_data',
+        'severity' => 'warning',
+        'label' => 'Artikelschema ontbreekt op een artikelpagina',
+        'description' => 'De pagina hoort bij een artikel in het CMS, maar stuurt geen Article-schema mee, dus mist hij de artikelweergave met auteur en datum in de zoekresultaten.',
+        'how_to_fix' => 'Het artikelschema komt uit dashed-articles via de head-component van dashed-core. Controleer of het thema die component gebruikt en of de artikelpagina het model als $model deelt.',
+    ],
+    'duplicate_schema_type' => [
+        'section' => 'structured_data',
+        'severity' => 'notice',
+        'label' => 'Dubbel schema op een pagina',
+        'description' => 'Hetzelfde schematype staat meer dan een keer op de pagina, bijvoorbeeld twee keer FAQPage of twee keer Organization; zoekmachines kiezen er dan zelf een en dat is vaak de verkeerde.',
+        'how_to_fix' => 'Haal het dubbele blok weg. Een FAQ-blok in het thema dat zelf een FAQPage print, naast de FAQPage uit de head, is de bekendste oorzaak; de head bouwt die al uit de FAQ-blokken van de pagina.',
+    ],
+    'schema_missing_properties' => [
+        'section' => 'structured_data',
+        'severity' => 'warning',
+        'label' => 'Schema mist verplichte eigenschappen',
+        'description' => 'Een schema op de pagina mist een eigenschap die Google verplicht stelt voor dat type, zoals headline op een Article of mainEntity op een FAQPage, waardoor het rijke resultaat niet verschijnt.',
+        'how_to_fix' => 'Vul de ontbrekende gegevens aan in het CMS (naam, afbeelding, datum, vragen) of pas het eigen script in het thema aan. De verplichte eigenschappen per type staan in config/dashed-seo.php onder structured_data.required.',
+    ],
+
+    // Paginering
+    'non_crawlable_pagination' => [
+        'section' => 'crawling',
+        'severity' => 'warning',
+        'label' => 'Paginering niet crawlbaar',
+        'description' => 'De pagina pagineert met een span met wire:click in plaats van een link met href, dus een zoekmachine ziet alleen de eerste pagina van het overzicht en de producten of artikelen daarachter niet.',
+        'how_to_fix' => 'Vervang de paginering in het thema (meestal resources/views/dashed/partials/pagination.blade.php) door @include(\'dashed-ecommerce-core::frontend.pagination\'), die ankers met ?page=N en rel=prev/next rendert en de klik met wire:click.prevent afvangt.',
+    ],
 ];

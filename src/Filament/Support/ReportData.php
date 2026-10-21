@@ -28,7 +28,7 @@ final class ReportData
     public const PDF_FINDINGS_PER_CHECK = 100;
 
     /**
-     * De negen secties in de vaste volgorde van het rapport. De volgorde komt
+     * De tien secties in de vaste volgorde van het rapport. De volgorde komt
      * hier vandaan en niet uit de database, want anders bepaalt de toevallige
      * registratievolgorde van de controles hoe het rapport eruitziet.
      */
@@ -38,6 +38,7 @@ final class ReportData
         'sitemap' => 'Sitemap',
         'meta_tags' => 'Meta tags',
         'content' => 'Inhoud',
+        'structured_data' => 'Gestructureerde data',
         'localisation' => 'Talen',
         'speed' => 'Snelheid',
         'assets' => 'CSS en JavaScript',
