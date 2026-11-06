@@ -59,7 +59,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             // Vegen elk uur, niet wekelijks: een vastgelopen handmatige scan
             // zou de site anders tot een week lang op slot houden.
             $schedule->command('dashed:run-site-audits --sweep-only')
-                ->hourly()
+                ->hourlyAt(class_exists(\Dashed\DashedCore\Classes\ScheduleSpread::class) ? \Dashed\DashedCore\Classes\ScheduleSpread::minute('run-site-audits-sweep') : 0)
                 ->withoutOverlapping()
                 ->when(fn () => \Dashed\DashedSeo\Audits\AuditSweeper::hasWork());
 
@@ -68,7 +68,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             // een vaste dag in de week hier zou dagelijks scannen onmogelijk
             // maken.
             $schedule->command('dashed:run-site-audits')
-                ->dailyAt('03:00')
+                ->dailyAt(class_exists(\Dashed\DashedCore\Classes\ScheduleSpread::class) ? \Dashed\DashedCore\Classes\ScheduleSpread::at('03:00', 'run-site-audits') : '03:00')
                 ->withoutOverlapping();
         });
 
