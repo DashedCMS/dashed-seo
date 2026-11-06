@@ -10,6 +10,19 @@ use Dashed\DashedSeo\Settings\AuditSettings;
 final class AuditSweeper
 {
     /**
+     * Zonder lopende scan valt er niets te vegen. Lukt de query niet, dan draait
+     * het commando gewoon.
+     */
+    public static function hasWork(): bool
+    {
+        return rescue(
+            fn () => SiteAudit::query()->whereIn('status', SiteAudit::runningStatuses())->exists(),
+            true,
+            false
+        );
+    }
+
+    /**
      * Zet scans zonder hartslag op mislukt en geeft terug hoeveel er zijn
      * geveegd. Zonder dit blijft een site voorgoed op slot na een worker die
      * halverwege is gestopt: de guard ziet een lopende scan die nooit meer

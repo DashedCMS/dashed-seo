@@ -60,7 +60,8 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             // zou de site anders tot een week lang op slot houden.
             $schedule->command('dashed:run-site-audits --sweep-only')
                 ->hourly()
-                ->withoutOverlapping();
+                ->withoutOverlapping()
+                ->when(fn () => \Dashed\DashedSeo\Audits\AuditSweeper::hasWork());
 
             // Elke nacht kijken wie er aan de beurt is. De frequentie staat per
             // site in de instellingen (dagelijks, wekelijks, maandelijks), dus
@@ -71,9 +72,9 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 ->withoutOverlapping();
         });
 
-        cms()->builder('plugins', array_merge(cms()->builder('plugins') ?: [], [
+        cms()->builder('plugins', [
             new DashedSeoPlugin(),
-        ]));
+        ]);
 
         cms()->registerSettingsPage(
             DashedSeoSettingsPage::class,
