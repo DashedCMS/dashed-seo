@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Dashed\DashedSeo\Fixes\Content;
 
+use Dashed\DashedFiles\Models\MediaItem;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
-use RalphJSmit\Filament\MediaLibrary\Models\MediaLibraryItem;
 
 /**
  * Van een afbeeldingsadres uit de gecrawlde pagina terug naar het item in de
@@ -25,7 +25,7 @@ final class MediaItemLocator
 {
     protected const UUID_PATTERN = '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i';
 
-    public static function forSrc(string $src): ?MediaLibraryItem
+    public static function forSrc(string $src): ?MediaItem
     {
         $pad = parse_url($src, PHP_URL_PATH) ?: '';
 
@@ -37,7 +37,7 @@ final class MediaItemLocator
     }
 
     /** Elk bestand staat in een map met het media-uuid als naam. */
-    protected static function viaUuid(string $pad): ?MediaLibraryItem
+    protected static function viaUuid(string $pad): ?MediaItem
     {
         if (! preg_match(self::UUID_PATTERN, $pad, $match)) {
             return null;
@@ -45,7 +45,7 @@ final class MediaItemLocator
 
         $media = Media::findByUuid($match[0]);
 
-        return $media?->model instanceof MediaLibraryItem ? $media->model : null;
+        return MediaItem::fromMedia($media);
     }
 
     /**
@@ -63,7 +63,7 @@ final class MediaItemLocator
      * de rauwe, zodat een file_name die toevallig letterlijk %20 bevat ook
      * nog matcht.
      */
-    protected static function viaBestandsnaam(string $pad): ?MediaLibraryItem
+    protected static function viaBestandsnaam(string $pad): ?MediaItem
     {
         $bestand = basename($pad);
 
@@ -89,7 +89,7 @@ final class MediaItemLocator
             }
         }
 
-        return $media?->model instanceof MediaLibraryItem ? $media->model : null;
+        return MediaItem::fromMedia($media);
     }
 
     /**

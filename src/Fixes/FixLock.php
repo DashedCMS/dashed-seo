@@ -26,7 +26,8 @@ final class FixLock
 {
     public static function onSubject(SiteAuditFix $fix): void
     {
-        $type = $fix->subject_type;
+        // Een bibliotheekitem staat onder een morph-alias, niet onder zijn klassenaam.
+        $type = $fix->subject_type ? (\Illuminate\Database\Eloquent\Relations\Relation::getMorphedModel($fix->subject_type) ?? $fix->subject_type) : null;
 
         if (! $type || ! $fix->subject_id || ! class_exists($type)) {
             return;

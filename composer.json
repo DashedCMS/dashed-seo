@@ -15,6 +15,7 @@
         "php": "^8.4",
         "barryvdh/laravel-dompdf": "^3.1",
         "dashed/dashed-core": "*",
+        "dashed/dashed-files": "^4.8",
         "spatie/laravel-package-tools": "^1.16"
     },
     "autoload": {

@@ -33,6 +33,18 @@ final class FixGuard
         $values = [];
 
         foreach (array_keys($fix->before ?? []) as $field) {
+            // Een tekst van de mediabibliotheek is per taal: de fix draagt de
+            // taal, het model heeft er geen vertaalbare kolom voor.
+            // Op de oude motor is het subject het model van het pakket, op
+            // dezelfde rij: de vertalingen staan dan in dezelfde attributen.
+            $mediaTexts = 'Dashed\\DashedFiles\\Classes\\MediaTexts';
+
+            if ($fix->locale && $subject->getMorphClass() === 'filament_media_library_item' && class_exists($mediaTexts) && ($name = $mediaTexts::field($field)) !== null) {
+                $values[$field] = $mediaTexts::of($subject, $name)[$fix->locale] ?? null;
+
+                continue;
+            }
+
             // Een sleutel die geen kolom is (bijvoorbeeld een vlag als
             // 'verwijderd' bij RemoveRedirectLoopFixer) telt niet mee in de
             // verlooptoets: er is niets op het model om tegen af te zetten, en
@@ -108,6 +120,15 @@ final class FixGuard
         // goedkeurt in plaats van op de sessiegebruiker. Een queue-worker
         // heeft geen sessie en geen paneel, dus Resource::canEdit() zou hier
         // altijd weigeren. Zie vendor/filament/filament/src/helpers.php.
+        // Een item van de mediabibliotheek: de bibliotheek kent ook een
+        // policy die nog op de klasse van het oude pakket is getypeerd, en die
+        // vindt Gate niet meer nu het subject ons eigen model is.
+        $library = 'Dashed\\DashedFiles\\Classes\\MediaLibrary';
+
+        if (is_a($subject, 'Dashed\\DashedFiles\\Models\\MediaItem') && class_exists($library)) {
+            return app($library)->canUpdate($user, $subject);
+        }
+
         $policy = Gate::getPolicyFor($subject);
 
         if (! $policy || ! method_exists($policy, 'update')) {
