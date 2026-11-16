@@ -16,7 +16,9 @@ use Dashed\DashedSeo\Models\SiteAuditFix;
 use Dashed\DashedSeo\Settings\FixSettings;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
+use Dashed\DashedCore\Models\BackgroundTask;
 use Dashed\DashedSeo\Models\SiteAuditFinding;
+use Dashed\DashedSeo\Filament\Resources\SiteAuditFixResource;
 
 /**
  * Loopt de bevindingen van een afgeronde scan langs en maakt er voorstellen
@@ -29,6 +31,8 @@ class ProposeSiteAuditFixesJob implements ShouldQueue
     use InteractsWithQueue;
     use Queueable;
     use SerializesModels;
+
+    public const TASK_TYPE = 'site-audit-proposals';
 
     public int $timeout = 900;
 
@@ -60,6 +64,16 @@ class ProposeSiteAuditFixesJob implements ShouldQueue
                 ->distinct()
                 ->pluck('check_key');
 
+            // In het takenicoon van het CMS, per controle een stap. Alleen als
+            // er iets te doen valt: een scan zonder controles met een fixer
+            // hoeft daar niet te staan.
+            $task = $this->beginTask($audit, $checkKeys->filter(
+                fn (string $checkKey): bool => $registry->fixerFor($checkKey) !== null
+                    && FixSettings::modeFor($checkKey, $audit->site_id) !== FixSettings::MODE_OFF
+            )->count());
+            $proposed = 0;
+            $step = 0;
+
             foreach ($checkKeys as $checkKey) {
                 $fixer = $registry->fixerFor($checkKey);
 
@@ -72,6 +86,8 @@ class ProposeSiteAuditFixesJob implements ShouldQueue
                 if ($mode === FixSettings::MODE_OFF) {
                     continue;
                 }
+
+                $task?->progress($step++);
 
                 $findings = SiteAuditFinding::where('audit_id', $audit->id)
                     ->where('check_key', $checkKey)
@@ -134,17 +150,69 @@ class ProposeSiteAuditFixesJob implements ShouldQueue
                         'fingerprint' => $fingerprint,
                     ]);
 
+                    $proposed++;
+
                     if ($fix->mode === SiteAuditFix::MODE_AUTO) {
                         ApplySiteAuditFixJob::dispatch($fix->id);
                     }
                 }
             }
+
+            $task?->finish(
+                __(':aantal voorstellen gemaakt.', ['aantal' => $proposed]),
+                rescue(fn () => SiteAuditFixResource::getUrl('index'), null, report: false),
+                __('Naar de voorstellen'),
+            );
         } finally {
             // Een queue-worker draait lang en pakt hierna een andere job op.
             // Zonder dit denkt die job dat de site van deze scan de actieve
             // site is.
             config()->set('dashed-core.dashed_site_id', $vorigeSite);
         }
+    }
+
+    /**
+     * Een afgebroken ronde (tijdslimiet, een fout buiten propose()) mag niet
+     * als lopend in het takenicoon blijven staan. Een verse instantie: de
+     * taak uit handle() is hier niet bekend.
+     */
+    public function failed(?\Throwable $e = null): void
+    {
+        if (! class_exists(BackgroundTask::class)) {
+            return;
+        }
+
+        rescue(fn () => BackgroundTask::query()
+            ->where('type', self::TASK_TYPE)
+            ->where('subject_type', self::TASK_TYPE)
+            ->where('subject_id', (string) $this->auditId)
+            ->active()
+            ->latest('id')
+            ->first()
+            ?->fail($e), report: false);
+    }
+
+    /**
+     * Geen gebruiker en geen melding: de ronde start vanzelf na een scan. Het
+     * subject is het type met het id van de scan, zodat failed() de taak
+     * terugvindt zonder de spiegel van de scan zelf (subject SiteAudit) in de
+     * weg te zitten.
+     */
+    protected function beginTask(SiteAudit $audit, int $steps): ?BackgroundTask
+    {
+        if ($steps < 1 || ! class_exists(BackgroundTask::class)) {
+            return null;
+        }
+
+        return rescue(function () use ($audit, $steps): BackgroundTask {
+            $task = BackgroundTask::begin(self::TASK_TYPE, __('Sitescan: voorstellen maken'), $steps, notify: false);
+
+            if ($task->exists) {
+                $task->update(['subject_type' => self::TASK_TYPE, 'subject_id' => (string) $audit->id]);
+            }
+
+            return $task;
+        }, null, report: false);
     }
 
     /**

@@ -9,6 +9,7 @@ use Dashed\DashedCore\Models\User;
 use Illuminate\Support\Facades\DB;
 use Dashed\DashedSeo\Fixes\FixLock;
 use Dashed\DashedSeo\Fixes\FixGuard;
+use Dashed\DashedSeo\Fixes\FixBatchTask;
 use Dashed\DashedCore\Classes\Locales;
 use Dashed\DashedSeo\SeoFixerRegistry;
 use Illuminate\Queue\SerializesModels;
@@ -40,11 +41,29 @@ class ApplySiteAuditFixJob implements ShouldQueue
 
     public int $timeout = 300;
 
-    public function __construct(public int $fixId, public ?int $userId = null)
+    /**
+     * $taskId is de taak van een bulkactie in het takenicoon van het CMS
+     * (FixBatchTask); null bij een los voorstel.
+     */
+    public function __construct(public int $fixId, public ?int $userId = null, public ?int $taskId = null)
     {
     }
 
     public function handle(): void
+    {
+        $this->applyFix();
+
+        // Pas na afloop en niet in een finally: klapt de job eruit, dan telt
+        // failed() hem, en zo telt geen voorstel dubbel.
+        FixBatchTask::advance($this->taskId);
+    }
+
+    public function failed(?\Throwable $e = null): void
+    {
+        FixBatchTask::advance($this->taskId);
+    }
+
+    protected function applyFix(): void
     {
         $fix = SiteAuditFix::find($this->fixId);
 

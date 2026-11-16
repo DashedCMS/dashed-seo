@@ -15,6 +15,7 @@ use Dashed\DashedCore\Classes\Sites;
 use Dashed\DashedSeo\SeoCheckRegistry;
 use Dashed\DashedSeo\SeoFixerRegistry;
 use Filament\Tables\Columns\TextColumn;
+use Dashed\DashedSeo\Fixes\FixBatchTask;
 use Dashed\DashedSeo\Models\SiteAuditFix;
 use Filament\Tables\Filters\SelectFilter;
 use Dashed\DashedSeo\Jobs\ApplySiteAuditFixJob;
@@ -152,9 +153,14 @@ class SiteAuditFixResource extends Resource
                     ->label(__('Toepassen'))
                     ->icon('heroicon-o-check')
                     ->requiresConfirmation()
-                    ->action(fn (Collection $records) => $records
-                        ->where('status', SiteAuditFix::STATUS_PENDING)
-                        ->each(fn (SiteAuditFix $record) => ApplySiteAuditFixJob::dispatch($record->id, auth()->id()))),
+                    ->action(function (Collection $records): void {
+                        $pending = $records->where('status', SiteAuditFix::STATUS_PENDING);
+
+                        // Eén taak in het takenicoon voor de hele reeks.
+                        $taskId = FixBatchTask::start($pending->count(), auth()->id());
+
+                        $pending->each(fn (SiteAuditFix $record) => ApplySiteAuditFixJob::dispatch($record->id, auth()->id(), $taskId));
+                    }),
                 BulkAction::make('afwijzenInBulk')
                     ->label(__('Afwijzen'))
                     ->icon('heroicon-o-x-mark')

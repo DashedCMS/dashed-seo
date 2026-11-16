@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Dashed\DashedSeo\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Dashed\DashedSeo\Audits\SiteAuditTaskMirror;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SiteAudit extends Model
@@ -40,6 +41,14 @@ class SiteAudit extends Model
         'finished_at' => 'datetime',
         'heartbeat_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        // Gespiegeld naar het takenicoon in de topbalk van het CMS: elke
+        // statuswijziging en elke partij van de crawler slaat de scan op.
+        static::saved(fn (SiteAudit $audit) => SiteAuditTaskMirror::sync($audit));
+        static::deleted(fn (SiteAudit $audit) => SiteAuditTaskMirror::forget($audit));
+    }
 
     public function pages(): HasMany
     {

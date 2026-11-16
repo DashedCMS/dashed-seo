@@ -7,6 +7,7 @@ namespace Dashed\DashedSeo\Filament\Resources\SiteAuditResource\Pages;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\Page;
 use Filament\Notifications\Notification;
+use Dashed\DashedSeo\Fixes\FixBatchTask;
 use Dashed\DashedSeo\Models\SiteAuditFix;
 use Illuminate\Contracts\Support\Htmlable;
 use Dashed\DashedSeo\Jobs\ApplySiteAuditFixJob;
@@ -130,8 +131,11 @@ class ViewSiteAuditReport extends Page
             ->where('status', SiteAuditFix::STATUS_PENDING)
             ->get();
 
+        // Eén taak in het takenicoon voor de hele reeks.
+        $taskId = FixBatchTask::start($fixes->count(), auth()->id());
+
         foreach ($fixes as $fix) {
-            ApplySiteAuditFixJob::dispatch($fix->id, auth()->id());
+            ApplySiteAuditFixJob::dispatch($fix->id, auth()->id(), $taskId);
         }
 
         Notification::make()
