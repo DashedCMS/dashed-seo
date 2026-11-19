@@ -22,6 +22,7 @@ class BrokenExternalLinkCheck extends BaseCheck
         $broken = SiteAuditAsset::where('audit_id', $audit->id)
             ->where('type', SiteAuditAsset::TYPE_EXTERNAL)
             ->where(fn ($query) => $query->whereNull('status_code')->orWhere('status_code', '>=', 400))
+            ->where(fn ($query) => $query->whereNull('status_code')->orWhereNotIn('status_code', \Dashed\DashedSeo\Checks\Support\ExternalLinkChecker::NOT_BROKEN_STATUSES))
             ->pluck('url_hash')
             ->flip();
 

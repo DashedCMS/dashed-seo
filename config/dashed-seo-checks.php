@@ -298,6 +298,13 @@ return [
         'description' => 'De server doet er lang over om deze pagina uit te leveren, wat bezoekers afhaakt en crawlbudget kost.',
         'how_to_fix' => 'Zoek uit welke vragen aan de database of welke externe aanroepen de tijd opsouperen, en zet er caching op.',
     ],
+    'poor_core_web_vitals' => [
+        'section' => 'speed',
+        'severity' => 'warning',
+        'label' => 'Slechte Core Web Vitals',
+        'description' => 'Volgens de laatste meting van de Prestatiemonitor (PageSpeed Insights) laadt deze pagina traag of verspringt hij: LCP boven 4 seconden, INP boven 500 milliseconden, CLS boven 0,25 of een prestatiescore onder de 50.',
+        'how_to_fix' => 'Open de Prestatiemonitor voor de details per meting. Maak de grootste afbeelding boven de vouw kleiner en laad hem met voorrang, stel scripts van derden uit en geef afbeeldingen en blokken een vaste hoogte.',
+    ],
     'html_too_large' => [
         'section' => 'speed',
         'severity' => 'notice',

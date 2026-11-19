@@ -17,6 +17,10 @@ return [
         // many times" terwijl de scan gewoon zijn werk deed.
         'max_batch_seconds' => 60,
         'max_external_links' => 200,
+        // Externe links: hooguit zoveel per host per scan, met minstens zoveel
+        // milliseconden tussen twee verzoeken naar dezelfde host.
+        'max_external_per_host' => 25,
+        'external_host_delay_ms' => 1000,
         // Bovengrens op het aantal bronbestanden (css/js/afbeeldingen) dat een
         // enkele audit ophaalt, over alle batches heen. Zonder plafond is een
         // volledige-body GET op elk distinct bronbestand van een shop met

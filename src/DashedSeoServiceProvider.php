@@ -12,7 +12,9 @@ use Dashed\DashedSeo\Events\SiteAuditCompleted;
 use Dashed\DashedSeo\Retention\SiteAuditOpruimer;
 use Dashed\DashedSeo\Listeners\ProposeFixesAfterAudit;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Dashed\DashedSeo\Settings\SearchConsoleSettings;
 use Dashed\DashedSeo\Filament\Pages\Settings\DashedSeoSettingsPage;
+use Dashed\DashedSeo\Filament\Pages\Settings\SearchPerformanceSettingsPage;
 
 class DashedSeoServiceProvider extends PackageServiceProvider
 {
@@ -35,6 +37,8 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_08_22_000010_create_site_audit_fixes_table',
                 '2026_08_23_000011_add_finding_id_to_site_audit_fixes_table',
                 '2026_10_20_000012_add_structured_data_to_site_audit_pages_table',
+                '2026_11_19_000013_create_search_console_rows_table',
+                '2026_11_19_000014_create_pagespeed_measurements_table',
             ])
             ->runsMigrations()
             ->hasViews()
@@ -42,6 +46,8 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 \Dashed\DashedSeo\Commands\RunSiteAudit::class,
                 \Dashed\DashedSeo\Commands\RunSiteAudits::class,
                 \Dashed\DashedSeo\Commands\PruneSiteAudits::class,
+                \Dashed\DashedSeo\Commands\SyncSearchConsole::class,
+                \Dashed\DashedSeo\Commands\MeasurePageSpeed::class,
             ]);
     }
 
@@ -70,6 +76,16 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             $schedule->command('dashed:run-site-audits')
                 ->dailyAt(class_exists(\Dashed\DashedCore\Classes\ScheduleSpread::class) ? \Dashed\DashedCore\Classes\ScheduleSpread::at('03:00', 'run-site-audits') : '03:00')
                 ->withoutOverlapping();
+
+            // Beide commando's slaan sites over waar het uit staat, dus
+            // zonder instellingen doen ze niets.
+            $schedule->command('dashed:sync-search-console')
+                ->dailyAt(class_exists(\Dashed\DashedCore\Classes\ScheduleSpread::class) ? \Dashed\DashedCore\Classes\ScheduleSpread::at('05:00', 'sync-search-console') : '05:00')
+                ->withoutOverlapping();
+
+            $schedule->command('dashed:measure-pagespeed')
+                ->dailyAt(class_exists(\Dashed\DashedCore\Classes\ScheduleSpread::class) ? \Dashed\DashedCore\Classes\ScheduleSpread::at('04:00', 'measure-pagespeed') : '04:00')
+                ->withoutOverlapping();
         });
 
         cms()->builder('plugins', [
@@ -82,6 +98,19 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             'magnifying-glass-circle',
             'Basis-URL, limieten en drempelwaarden voor de technische sitescan'
         );
+
+        cms()->registerSettingsPage(
+            SearchPerformanceSettingsPage::class,
+            'Zoekprestaties',
+            'chart-bar',
+            'Google Search Console en de Prestatiemonitor (PageSpeed Insights)'
+        );
+
+        cms()->registerRolePermissions('SEO', [
+            'view_search_performance' => __('Zoekwoorden en prestatiemonitor bekijken'),
+        ]);
+
+        self::registreerGoogleKoppeling();
 
         $registry = $this->app->make(SeoCheckRegistry::class);
 
@@ -141,6 +170,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
             \Dashed\DashedSeo\Checks\Speed\SlowResponseCheck::class,
             \Dashed\DashedSeo\Checks\Speed\HtmlTooLargeCheck::class,
             \Dashed\DashedSeo\Checks\Speed\NoCompressionCheck::class,
+            \Dashed\DashedSeo\Checks\Speed\PoorCoreWebVitalsCheck::class,
 
             // CSS & JS
             \Dashed\DashedSeo\Checks\Assets\CssTooLargeCheck::class,
@@ -225,6 +255,54 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                         ->label(__('Volledige sitescans bewaren (aantal)'))
                         ->uitleg(__('Zoveel scans blijven volledig. Oudere scans houden hun samenvatting maar verliezen de losse pagina- en linkregels, en dat is waar de omvang zit. Standaard: 10 scans.'))
                 )
+        );
+
+        cms()->registerRetention(
+            Retention::make('search_console_rows')
+                ->label(__('Zoekwoorden uit Search Console'))
+                ->pakket('dashed-seo', __('SEO en site'))
+                ->tabel('dashed__search_console_rows')
+                ->termijn(
+                    Termijn::make('search_console_rows', 480, 'date')
+                        ->label(__('Zoekwoordcijfers bewaren (dagen)'))
+                        ->uitleg(__('Klikken, vertoningen en posities per pagina, zoekterm en dag. Search Console zelf bewaart zestien maanden. Standaard: 480 dagen.'))
+                )
+        );
+
+        cms()->registerRetention(
+            Retention::make('pagespeed_measurements')
+                ->label(__('Metingen van de Prestatiemonitor'))
+                ->pakket('dashed-seo', __('SEO en site'))
+                ->tabel('dashed__pagespeed_measurements')
+                ->termijn(
+                    Termijn::make('pagespeed_measurements', 365, 'measured_at')
+                        ->label(__('PageSpeed-metingen bewaren (dagen)'))
+                        ->uitleg(__('De dagelijkse metingen per URL, mobiel en desktop. Standaard: 365 dagen.'))
+                )
+        );
+    }
+
+    /**
+     * Search Console koppelt via dezelfde Google-app en callback als de
+     * Business-koppeling in core (zie GoogleOAuthFlows), met alleen-lezen
+     * toegang en een refresh-token per site. Achter class_exists: een oudere
+     * core kent het register niet, en dan blijft de koppelknop weg.
+     */
+    public static function registreerGoogleKoppeling(): void
+    {
+        if (! class_exists(\Dashed\DashedCore\Classes\GoogleOAuthFlows::class)) {
+            return;
+        }
+
+        \Dashed\DashedCore\Classes\GoogleOAuthFlows::register(
+            SearchConsoleSettings::OAUTH_FLOW,
+            [SearchConsoleSettings::SCOPE],
+            function (array $token, ?string $siteId): void {
+                if (! empty($token['refresh_token'])) {
+                    SearchConsoleSettings::storeRefreshToken((string) $token['refresh_token'], $siteId);
+                }
+            },
+            fn (?string $siteId): string => SearchPerformanceSettingsPage::getUrl(),
         );
     }
 }

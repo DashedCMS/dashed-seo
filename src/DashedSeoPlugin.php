@@ -8,7 +8,10 @@ use Filament\Panel;
 use Filament\Contracts\Plugin;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditResource;
 use Dashed\DashedSeo\Filament\Resources\SiteAuditFixResource;
+use Dashed\DashedSeo\Filament\Pages\PageSpeedMonitorPage;
+use Dashed\DashedSeo\Filament\Pages\SearchConsoleKeywordsPage;
 use Dashed\DashedSeo\Filament\Pages\Settings\DashedSeoSettingsPage;
+use Dashed\DashedSeo\Filament\Pages\Settings\SearchPerformanceSettingsPage;
 
 class DashedSeoPlugin implements Plugin
 {
@@ -28,6 +31,9 @@ class DashedSeoPlugin implements Plugin
             // niet, ook al staat hij wel in het instellingenoverzicht.
             ->pages([
                 DashedSeoSettingsPage::class,
+                SearchPerformanceSettingsPage::class,
+                SearchConsoleKeywordsPage::class,
+                PageSpeedMonitorPage::class,
             ]);
     }
 
