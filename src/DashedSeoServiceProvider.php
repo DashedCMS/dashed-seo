@@ -39,6 +39,7 @@ class DashedSeoServiceProvider extends PackageServiceProvider
                 '2026_10_20_000012_add_structured_data_to_site_audit_pages_table',
                 '2026_11_19_000013_create_search_console_rows_table',
                 '2026_11_19_000014_create_pagespeed_measurements_table',
+                '2026_11_19_000015_add_indexes_to_pagespeed_measurements_table',
             ])
             ->runsMigrations()
             ->hasViews()

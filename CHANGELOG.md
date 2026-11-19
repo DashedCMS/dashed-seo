@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.10.1 - 2026-11-19
+
+### Fixed
+- Migratie PageSpeed-metingen liep op MySQL vast op een te lange indexnaam (max. 64 tekens). Indexen hebben nu een korte naam; een nieuwe migratie zet ze alsnog op sites waar de tabel zonder indexen achterbleef.
+
 ## v4.10.0 - 2026-11-19
 
 ### Added
