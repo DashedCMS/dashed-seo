@@ -85,14 +85,12 @@ final class FixGuard
         if ($fixer?->isSiteWide()) {
             // De sitemap opnieuw bouwen of een regel in robots.txt zetten geldt
             // voor alles wat er staat, dus daar is alleen een superbeheerder
-            // voor. Bewust deze kolom en niet hasRole(): dit project heeft geen
-            // rollenpakket op User, en de twee plekken die hasRole() wel
-            // aanroepen zetten er method_exists() voor.
+            // voor: de superadmin-vlag, geen rol of permissie.
             //
             // Bewust de uitspraak van de fixer en niet een leeg subject als
             // maatstaf: MissingPageRedirectFixer heeft bij het voorstellen ook
             // geen subject en maakt toch maar een enkele redirectrij aan.
-            return $user->role === 'superadmin';
+            return $user->isSuperadmin();
         }
 
         $subject = $fix->subject;

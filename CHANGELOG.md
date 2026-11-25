@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.11.0 - 2026-11-25
+
+### Changed
+- Automatisch oplossen zonder paneelsessie toetst superadmin met `is_superadmin`, en meldingen gaan naar iedereen met toegang tot het CMS (vereist dashed-core ^4.124).
+
 ## v4.10.1 - 2026-11-19
 
 ### Fixed
